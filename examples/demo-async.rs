@@ -1,14 +1,10 @@
+#![allow(unstable)]
+#![feature(int_uint)]
 extern crate libc;
-extern crate native;
 
 extern crate termkey;
 
 use libc::c_int;
-
-#[start]
-fn start(argc: int, argv: *const *const u8) -> int {
-    native::start(argc, argv, main)
-}
 
 pub mod poll_
 {
@@ -35,6 +31,7 @@ pub mod poll_
 
     #[repr(C)]
     #[allow(non_camel_case_types)]
+    #[derive(Copy)]
     pub struct pollfd
     {
         pub fd: c_int,
@@ -76,7 +73,7 @@ fn main()
         {
             match tk.getkey_force()
             {
-                termkey::Key(key) => { on_key(&mut tk, key) }
+                termkey::TermKeyResult::Key(key) => { on_key(&mut tk, key) }
                 _ => {}
             }
         }
@@ -88,12 +85,12 @@ fn main()
         {
             match tk.getkey()
             {
-                termkey::Key(key) =>
+                termkey::TermKeyResult::Key(key) =>
                 {
                     on_key(&mut tk, key);
                     match key
                     {
-                        termkey::UnicodeEvent{mods, codepoint, utf8: _} =>
+                        termkey::TermKeyEvent::UnicodeEvent{mods, codepoint, utf8: _} =>
                         {
                             if !(mods & termkey::c::TERMKEY_KEYMOD_CTRL).is_empty() && (codepoint == 'C' || codepoint == 'c')
                             {
@@ -103,7 +100,7 @@ fn main()
                         _ => {}
                     }
                 }
-                termkey::Again => { nextwait = tk.get_waittime(); break; }
+                termkey::TermKeyResult::Again => { nextwait = tk.get_waittime(); break; }
                 _ => { nextwait = -1; break; }
             }
         }

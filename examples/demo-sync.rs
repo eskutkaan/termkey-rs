@@ -1,11 +1,6 @@
-extern crate native;
-
+#![allow(unstable)]
+#![feature(int_uint)]
 extern crate termkey;
-
-#[start]
-fn start(argc: int, argv: *const *const u8) -> int {
-    native::start(argc, argv, main)
-}
 
 fn main()
 {
@@ -34,28 +29,28 @@ fn main()
     {
         match tk.waitkey()
         {
-            termkey::Eof => break,
-            termkey::Key(key) =>
+            termkey::TermKeyResult::Eof => break,
+            termkey::TermKeyResult::Key(key) =>
             {
                 let s = tk.strfkey(key, format);
                 println!("Key {}", s);
 
                 match key
                 {
-                    termkey::MouseEvent{mods: _, ev: _, button: _, line, col} =>
+                    termkey::TermKeyEvent::MouseEvent{mods: _, ev: _, button: _, line, col} =>
                     {
                         println!("Mouse (printing unimplemented, sorry) at line={}, col={}\n", line, col)
                     }
-                    termkey::PositionEvent{line, col} =>
+                    termkey::TermKeyEvent::PositionEvent{line, col} =>
                     {
                         println!("Cursor position report at line={}, col={}\n", line, col)
                     }
-                    termkey::ModeReportEvent{initial, mode, value} =>
+                    termkey::TermKeyEvent::ModeReportEvent{initial, mode, value} =>
                     {
                         let initial_str = if initial != 0 { "DEC" } else { "ANSI" };
                         println!("Mode report {} mode {} = {}\n", initial_str, mode, value)
                     }
-                    termkey::UnknownCsiEvent =>
+                    termkey::TermKeyEvent::UnknownCsiEvent =>
                     {
                         println!("Unrecognised CSI (printing unimplemented, sorry)\n")
                     }
@@ -63,7 +58,7 @@ fn main()
                 }
                 match key
                 {
-                    termkey::UnicodeEvent{mods, codepoint, utf8: _} =>
+                    termkey::TermKeyEvent::UnicodeEvent{mods, codepoint, utf8: _} =>
                     {
                         if !(mods & termkey::c::TERMKEY_KEYMOD_CTRL).is_empty() && (codepoint == 'C' || codepoint == 'c')
                         {
@@ -78,7 +73,7 @@ fn main()
                     _ => {}
                 }
             }
-            termkey::Error{errno: _} =>
+            termkey::TermKeyResult::Error{errno: _} =>
             {
                 println!("Error of some sort")
             }

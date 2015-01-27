@@ -6,8 +6,6 @@ pub use libc::c_long;
 pub use libc::c_ulong;
 pub use libc::size_t;
 
-//mod bitset_macro;
-
 pub static TERMKEY_VERSION_MAJOR: c_int = 0;
 pub static TERMKEY_VERSION_MINOR: c_int = 17;
 #[allow(non_snake_case)]
@@ -16,7 +14,7 @@ pub unsafe fn TERMKEY_CHECK_VERSION()
     termkey_check_version(TERMKEY_VERSION_MAJOR, TERMKEY_VERSION_MINOR);
 }
 
-#[repr(C)] #[deriving(PartialEq, PartialOrd)]
+#[repr(C)] #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub enum TermKeySym
 {
   TERMKEY_SYM_UNKNOWN = -1,
@@ -95,17 +93,18 @@ pub enum TermKeySym
   TERMKEY_N_SYMS
 }
 
-impl ::std::fmt::Show for TermKeySym
+impl ::std::fmt::Display for TermKeySym
 {
     fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
     {
-        let symi: c_int = unsafe { ::std::mem::transmute(*self) };
+        let symi: c_long = unsafe { ::std::mem::transmute(self) };
         let _ = write!(fmt, "{}", symi);
         Ok(())
     }
 }
 
 #[repr(C)]
+#[derive(Copy)]
 pub enum TermKeyType
 {
   TERMKEY_TYPE_UNICODE,
@@ -119,7 +118,7 @@ pub enum TermKeyType
   TERMKEY_TYPE_UNKNOWN_CSI = -1
 }
 
-#[repr(C)] #[deriving(PartialEq)]
+#[repr(C)] #[derive(Copy, PartialEq)]
 pub enum TermKeyResult
 {
   TERMKEY_RES_NONE,
@@ -129,7 +128,7 @@ pub enum TermKeyResult
   TERMKEY_RES_ERROR
 }
 
-#[repr(C)] #[deriving(PartialEq, PartialOrd)]
+#[repr(C)] #[derive(Copy, PartialEq, PartialOrd)]
 pub enum TermKeyMouseEvent
 {
   TERMKEY_MOUSE_UNKNOWN,
@@ -138,24 +137,24 @@ pub enum TermKeyMouseEvent
   TERMKEY_MOUSE_RELEASE
 }
 
-impl ::std::fmt::Show for TermKeyMouseEvent
+impl ::std::fmt::Display for TermKeyMouseEvent
 {
     fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
     {
-        let symi: c_int = unsafe { ::std::mem::transmute(*self) };
+        let symi: c_long = unsafe { ::std::mem::transmute(self) };
         let _ = write!(fmt, "{}", symi);
         Ok(())
     }
 }
 
-bitset!(X_TermKey_KeyMod: c_int
+bitflags!{ flags X_TermKey_KeyMod: c_int
 {
-  TERMKEY_KEYMOD_SHIFT = 1 << 0,
-  TERMKEY_KEYMOD_ALT   = 1 << 1,
-  TERMKEY_KEYMOD_CTRL  = 1 << 2
-})
+  const TERMKEY_KEYMOD_SHIFT = 1 << 0,
+  const TERMKEY_KEYMOD_ALT   = 1 << 1,
+  const TERMKEY_KEYMOD_CTRL  = 1 << 2
+}}
 
-impl ::std::fmt::Show for X_TermKey_KeyMod
+impl ::std::fmt::Display for X_TermKey_KeyMod
 {
     fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result
     {
@@ -166,6 +165,7 @@ impl ::std::fmt::Show for X_TermKey_KeyMod
 }
 
 #[repr(C)]
+#[derive(Copy)]
 pub struct TermKeyKey
 {
   pub type_: TermKeyType,
@@ -173,7 +173,7 @@ pub struct TermKeyKey
   /*
   union {
     long       codepoint; /* TERMKEY_TYPE_UNICODE */
-    int        number;    /* TERMKEY_TYPE_FUNCTION */
+    isize      number;    /* TERMKEY_TYPE_FUNCTION */
     TermKeySym sym;       /* TERMKEY_TYPE_KEYSYM */
     char       mouse[4];  /* TERMKEY_TYPE_MOUSE */
                           /* opaque. see termkey_interpret_mouse */
@@ -184,13 +184,13 @@ pub struct TermKeyKey
 
   /* Any Unicode character can be UTF-8 encoded in no more than 6 bytes, plus
    * terminating NUL */
-  pub utf8: [c_char, ..7],
+  pub utf8: [c_char; 7],
 }
 impl ::std::default::Default for TermKeyKey
 {
     fn default() -> TermKeyKey
     {
-        TermKeyKey{type_: TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0, ..7]}
+        TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0; 7]}
     }
 }
 impl TermKeyKey
@@ -207,27 +207,27 @@ impl TermKeyKey
     pub unsafe fn sym(&self) -> TermKeySym
     {
         let s: &TermKeySym = ::std::mem::transmute(&self.code);
-        *s
+        s.clone()
     }
 }
 impl TermKeyKey
 {
-    pub fn from_codepoint(mods: X_TermKey_KeyMod, codepoint: char, utf8: [c_char, ..7]) -> TermKeyKey
+    pub fn from_codepoint(mods: X_TermKey_KeyMod, codepoint: char, utf8: [c_char; 7]) -> TermKeyKey
     {
         unsafe
         {
             let mods: c_int = ::std::mem::transmute(mods);
             let codepoint: c_long = codepoint as c_long;
-            TermKeyKey{type_: TERMKEY_TYPE_UNICODE, code: codepoint, modifiers: mods, utf8: utf8}
+            TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: codepoint, modifiers: mods, utf8: utf8}
         }
     }
-    pub fn from_num(mods: X_TermKey_KeyMod, num: int) -> TermKeyKey
+    pub fn from_num(mods: X_TermKey_KeyMod, num: isize) -> TermKeyKey
     {
         unsafe
         {
             let mods: c_int = ::std::mem::transmute(mods);
             let num: c_int = num as c_int;
-            let mut key = TermKeyKey{type_: TERMKEY_TYPE_FUNCTION, code: 0, modifiers: mods, utf8: [0, ..7]};
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_FUNCTION, code: 0, modifiers: mods, utf8: [0; 7]};
             let code: &mut c_int = ::std::mem::transmute(&mut key.code);
             *code = num;
             key
@@ -238,7 +238,7 @@ impl TermKeyKey
         unsafe
         {
             let mods: c_int = ::std::mem::transmute(mods);
-            let mut key = TermKeyKey{type_: TERMKEY_TYPE_KEYSYM, code: 0, modifiers: mods, utf8: [0, ..7]};
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_KEYSYM, code: 0, modifiers: mods, utf8: [0; 7]};
             let code: &mut TermKeySym = ::std::mem::transmute(&mut key.code);
             *code = sym;
             key
@@ -249,7 +249,7 @@ impl TermKeyKey
         unsafe
         {
             let mods: c_int = ::std::mem::transmute(mods);
-            let mut key = TermKeyKey{type_: TERMKEY_TYPE_UNICODE, code: 0, modifiers: mods, utf8: [0, ..7]};
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: mods, utf8: [0; 7]};
             termkey_construct_mouse(tk, &mut key, ev, button, line, col);
             key
         }
@@ -258,7 +258,7 @@ impl TermKeyKey
     {
         unsafe
         {
-            let mut key = TermKeyKey{type_: TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0, ..7]};
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0; 7]};
             termkey_construct_position(tk, &mut key, line, col);
             key
         }
@@ -267,50 +267,51 @@ impl TermKeyKey
     {
         unsafe
         {
-            let mut key = TermKeyKey{type_: TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0, ..7]};
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0; 7]};
             termkey_construct_modereport(tk, &mut key, initial, mode, value);
             key
         }
     }
 }
 
+#[derive(Copy)]
 pub enum TermKey {}
 
-bitset!(X_TermKey_Flag : c_int
+bitflags!{ flags X_TermKey_Flag : c_int
 {
-  TERMKEY_FLAG_NOINTERPRET = 1 << 0, /* Do not interpret C0//DEL codes if possible */
-  TERMKEY_FLAG_CONVERTKP   = 1 << 1, /* Convert KP codes to regular keypresses */
-  TERMKEY_FLAG_RAW         = 1 << 2, /* Input is raw bytes, not UTF-8 */
-  TERMKEY_FLAG_UTF8        = 1 << 3, /* Input is definitely UTF-8 */
-  TERMKEY_FLAG_NOTERMIOS   = 1 << 4, /* Do not make initial termios calls on construction */
-  TERMKEY_FLAG_SPACESYMBOL = 1 << 5, /* Sets TERMKEY_CANON_SPACESYMBOL */
-  TERMKEY_FLAG_CTRLC       = 1 << 6, /* Allow Ctrl-C to be read as normal, disabling SIGINT */
-  TERMKEY_FLAG_EINTR       = 1 << 7  /* Return ERROR on signal (EINTR) rather than retry */
-})
+  const TERMKEY_FLAG_NOINTERPRET = 1 << 0, /* Do not interpret C0//DEL codes if possible */
+  const TERMKEY_FLAG_CONVERTKP   = 1 << 1, /* Convert KP codes to regular keypresses */
+  const TERMKEY_FLAG_RAW         = 1 << 2, /* Input is raw bytes, not UTF-8 */
+  const TERMKEY_FLAG_UTF8        = 1 << 3, /* Input is definitely UTF-8 */
+  const TERMKEY_FLAG_NOTERMIOS   = 1 << 4, /* Do not make initial termios calls on construction */
+  const TERMKEY_FLAG_SPACESYMBOL = 1 << 5, /* Sets TERMKEY_CANON_SPACESYMBOL */
+  const TERMKEY_FLAG_CTRLC       = 1 << 6, /* Allow Ctrl-C to be read as normal, disabling SIGINT */
+  const TERMKEY_FLAG_EINTR       = 1 << 7  /* Return ERROR on signal (EINTR) rather than retry */
+}}
 
-bitset!(X_TermKey_Canon : c_int
+bitflags!{ flags X_TermKey_Canon : c_int
 {
-  TERMKEY_CANON_SPACESYMBOL = 1 << 0, /* Space is symbolic rather than Unicode */
-  TERMKEY_CANON_DELBS       = 1 << 1  /* Del is converted to Backspace */
-})
+  const TERMKEY_CANON_SPACESYMBOL = 1 << 0, /* Space is symbolic rather than Unicode */
+  const TERMKEY_CANON_DELBS       = 1 << 1  /* Del is converted to Backspace */
+}}
 
-bitset!(TermKeyFormat : c_int
+bitflags!{ #[repr(C)] flags TermKeyFormat : c_int
 {
-  TERMKEY_FORMAT_LONGMOD     = 1 << 0, /* Shift-... instead of S-... */
-  TERMKEY_FORMAT_CARETCTRL   = 1 << 1, /* ^X instead of C-X */
-  TERMKEY_FORMAT_ALTISMETA   = 1 << 2, /* Meta- or M- instead of Alt- or A- */
-  TERMKEY_FORMAT_WRAPBRACKET = 1 << 3, /* Wrap special keys in brackets like <Escape> */
-  TERMKEY_FORMAT_SPACEMOD    = 1 << 4, /* M Foo instead of M-Foo */
-  TERMKEY_FORMAT_LOWERMOD    = 1 << 5, /* meta or m instead of Meta or M */
-  TERMKEY_FORMAT_LOWERSPACE  = 1 << 6, /* page down instead of PageDown */
+  const TERMKEY_FORMAT_LONGMOD     = 1 << 0, /* Shift-... instead of S-... */
+  const TERMKEY_FORMAT_CARETCTRL   = 1 << 1, /* ^X instead of C-X */
+  const TERMKEY_FORMAT_ALTISMETA   = 1 << 2, /* Meta- or M- instead of Alt- or A- */
+  const TERMKEY_FORMAT_WRAPBRACKET = 1 << 3, /* Wrap special keys in brackets like <Escape> */
+  const TERMKEY_FORMAT_SPACEMOD    = 1 << 4, /* M Foo instead of M-Foo */
+  const TERMKEY_FORMAT_LOWERMOD    = 1 << 5, /* meta or m instead of Meta or M */
+  const TERMKEY_FORMAT_LOWERSPACE  = 1 << 6, /* page down instead of PageDown */
 
-  TERMKEY_FORMAT_MOUSE_POS   = 1 << 8, /* Include mouse position if relevant; @ col,line */
+  const TERMKEY_FORMAT_MOUSE_POS   = 1 << 8, /* Include mouse position if relevant; @ col,line */
 
 /* Some useful combinations */
-  TERMKEY_FORMAT_VIM         = (TERMKEY_FORMAT_ALTISMETA.bits|TERMKEY_FORMAT_WRAPBRACKET.bits),
-  TERMKEY_FORMAT_URWID       = (TERMKEY_FORMAT_LONGMOD.bits|TERMKEY_FORMAT_ALTISMETA.bits|
+  const TERMKEY_FORMAT_VIM         = (TERMKEY_FORMAT_ALTISMETA.bits|TERMKEY_FORMAT_WRAPBRACKET.bits),
+  const TERMKEY_FORMAT_URWID       = (TERMKEY_FORMAT_LONGMOD.bits|TERMKEY_FORMAT_ALTISMETA.bits|
           TERMKEY_FORMAT_LOWERMOD.bits|TERMKEY_FORMAT_SPACEMOD.bits|TERMKEY_FORMAT_LOWERSPACE.bits)
-})
+}}
 
 
 // Better to handle in makefile
