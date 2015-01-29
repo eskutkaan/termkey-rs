@@ -1,8 +1,8 @@
 #![allow(unstable)]
 
 use std::os;
-use std::io::Command;
-use std::io::process::InheritFd;
+use std::old_io::Command;
+use std::old_io::process::InheritFd;
 
 fn main() {
     assert!(Command::new("./build_termkey.sh").

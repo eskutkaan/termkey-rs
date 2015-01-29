@@ -7,7 +7,7 @@ extern crate termkey;
 
 macro_rules! diag {
     ($($arg:tt)*) => ({
-        let dst: &mut ::std::io::Writer = &mut ::std::io::stderr();
+        let dst: &mut ::std::old_io::Writer = &mut ::std::old_io::stderr();
         let _ = write!(dst, "# ");
         let _ = writeln!(dst, $($arg)*);
     });
