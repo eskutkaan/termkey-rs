@@ -1,4 +1,4 @@
-#![allow(unstable)]
+ #![feature(io)]
 
 use std::os;
 use std::old_io::Command;

@@ -1,5 +1,5 @@
-#![allow(unstable)]
 #![feature(int_uint)]
+
 extern crate termkey;
 
 fn main()

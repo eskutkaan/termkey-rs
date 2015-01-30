@@ -1,5 +1,6 @@
-#![allow(unstable)]
 #![feature(int_uint)]
+#![feature(libc)]
+
 extern crate libc;
 
 extern crate termkey;

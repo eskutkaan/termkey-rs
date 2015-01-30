@@ -1,5 +1,8 @@
-#![allow(unstable)]
+#![feature(core)]
 #![feature(int_uint)]
+#![feature(io)]
+#![feature(libc)]
+#![feature(os)]
 
 extern crate libc;
 
