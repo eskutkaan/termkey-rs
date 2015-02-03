@@ -1,4 +1,3 @@
-#![feature(core)]
 #![feature(collections)]
 #![feature(hash)]
 #![feature(int_uint)]
