@@ -1,4 +1,5 @@
 #![feature(core)]
+#![feature(env)]
 #![feature(int_uint)]
 #![feature(io)]
 #![feature(libc)]
@@ -850,7 +851,7 @@ fn test_05read()
     let fd = unsafe { std::os::pipe().unwrap() };
 
     /* Sanitise this just in case */
-    std::os::setenv("TERM", "vt100");
+    std::env::set_var("TERM", "vt100");
 
     let mut tk = termkey::TermKey::new(fd.reader, termkey::c::TERMKEY_FLAG_NOTERMIOS);
 
