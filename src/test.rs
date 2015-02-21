@@ -2,6 +2,7 @@
 #![feature(env)]
 #![feature(int_uint)]
 #![feature(libc)]
+#![feature(old_io)]
 #![feature(os)]
 
 extern crate libc;
