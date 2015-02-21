@@ -35,13 +35,14 @@ impl TermKey
         unsafe
         {
             c::TERMKEY_CHECK_VERSION();
-            let c_buffer = ::std::ffi::CString::from_slice(term.as_bytes());
-            let tk = c::termkey_new_abstract(c_buffer.as_ptr(), std::mem::transmute(flags));
-            if tk as usize == 0
-            {
-                panic!()
-            }
-            TermKey{tk: tk}
+            ::std::ffi::CString::new(term.as_bytes()).map(|c_buffer| {
+                let tk = c::termkey_new_abstract(c_buffer.as_ptr(), std::mem::transmute(flags));
+                if tk as usize == 0
+                {
+                    panic!()
+                }
+                TermKey{tk: tk}
+            }).unwrap()
         }
     }
 }
@@ -392,20 +393,21 @@ impl TermKey
     {
         unsafe
         {
-            let cbuf = ::std::ffi::CString::from_slice(s.as_bytes());
-            let rbuf = c::termkey_lookup_keyname(self.tk, cbuf.as_ptr(), sym);
-            let ci = cbuf.as_ptr() as usize;
-            let ri = rbuf as usize;
-            if ri != 0
-            {
-                let off = ri - ci;
-                let sbytelen = s.as_bytes().len();
-                Some(s.slice_unchecked(off, sbytelen))
-            }
-            else
-            {
-                None
-            }
+            ::std::ffi::CString::new(s.as_bytes()).ok().and_then(|cbuf| {
+                let rbuf = c::termkey_lookup_keyname(self.tk, cbuf.as_ptr(), sym);
+                let ci = cbuf.as_ptr() as usize;
+                let ri = rbuf as usize;
+                if ri != 0
+                {
+                    let off = ri - ci;
+                    let sbytelen = s.as_bytes().len();
+                    Some(s.slice_unchecked(off, sbytelen))
+                }
+                else
+                {
+                    None
+                }
+            })
         }
     }
 
@@ -413,8 +415,8 @@ impl TermKey
     {
         unsafe
         {
-            let name = ::std::ffi::CString::from_slice(keyname.as_bytes());
-            c::termkey_keyname2sym(self.tk, name.as_ptr())
+            ::std::ffi::CString::new(keyname.as_bytes()).map(|name|
+                c::termkey_keyname2sym(self.tk, name.as_ptr())).unwrap()
         }
     }
 }
@@ -468,22 +470,23 @@ impl TermKey
     {
         unsafe
         {
-            let cbuf = ::std::ffi::CString::from_slice(s.as_bytes());
-            let mut ckey : c::TermKeyKey = std::default::Default::default();
-            let rbuf = c::termkey_strpkey(self.tk, cbuf.as_ptr(), &mut ckey, format);
-            let ci = cbuf.as_ptr() as usize;
-            let ri = rbuf as usize;
-            if ri != 0
-            {
-                let key = TermKeyEvent::from_c(self.tk, ckey);
-                let off = ri - ci;
-                let sbytelen = s.as_bytes().len();
-                Some((key, s.slice_unchecked(off, sbytelen)))
-            }
-            else
-            {
-                None
-            }
+            ::std::ffi::CString::new(s.as_bytes()).ok().and_then(|cbuf| {
+                let mut ckey : c::TermKeyKey = std::default::Default::default();
+                let rbuf = c::termkey_strpkey(self.tk, cbuf.as_ptr(), &mut ckey, format);
+                let ci = cbuf.as_ptr() as usize;
+                let ri = rbuf as usize;
+                if ri != 0
+                {
+                    let key = TermKeyEvent::from_c(self.tk, ckey);
+                    let off = ri - ci;
+                    let sbytelen = s.as_bytes().len();
+                    Some((key, s.slice_unchecked(off, sbytelen)))
+                }
+                else
+                {
+                    None
+                }
+            })
         }
     }
 }
