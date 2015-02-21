@@ -45,7 +45,7 @@ mod taplib
             }
             if self._fail
             {
-                if !::std::thread::Thread::panicking()
+                if !::std::thread::panicking()
                 {
                     panic!()
                 }
