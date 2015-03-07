@@ -1,5 +1,4 @@
 #![feature(core)]
-#![feature(env)]
 #![feature(int_uint)]
 #![feature(libc)]
 #![feature(old_io)]

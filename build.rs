@@ -1,6 +1,3 @@
- #![feature(env)]
- #![feature(process)]
-
 use std::process::Command;
 
 fn main() {
