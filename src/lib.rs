@@ -2,7 +2,6 @@
 #![feature(int_uint)]
 #![feature(libc)]
 #![feature(os)]
-#![feature(std_misc)]
 
 #[macro_use]
 extern crate bitflags;
