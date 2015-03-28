@@ -1,7 +1,6 @@
 #![feature(convert)]
 #![feature(int_uint)]
 #![feature(libc)]
-#![feature(os)]
 
 extern crate libc;
 
@@ -844,14 +843,16 @@ fn test_05read()
     let mut tap = taplib::Tap::new();
     tap.plan_tests(21);
 
-    /* We'll need a real filehandle we can write/read.
-    * pipe() can make us one */
-    let fd = unsafe { std::os::pipe().unwrap() };
+    let (reader_fd, writer_fd) = unsafe {
+      let mut fds = [0; 2];
+      if libc::pipe(fds.as_mut_ptr()) != 0 { panic!("Failed to create pipe"); }
+      (fds[0], fds[1])
+    };
 
     /* Sanitise this just in case */
     std::env::set_var("TERM", "vt100");
 
-    let mut tk = termkey::TermKey::new(fd.reader, termkey::c::TERMKEY_FLAG_NOTERMIOS);
+    let mut tk = termkey::TermKey::new(reader_fd, termkey::c::TERMKEY_FLAG_NOTERMIOS);
 
     tap.is_int(tk.get_buffer_remaining(), 256, "buffer free initially 256");
 
@@ -864,7 +865,7 @@ fn test_05read()
         _ => { tap.bypass(1, "getkey yields RES_NONE when empty") }
     }
 
-    fd_write(fd.writer, "h");
+    fd_write(writer_fd, "h");
 
     match tk.getkey()
     {
@@ -918,7 +919,7 @@ fn test_05read()
         _ => { tap.bypass(1, "getkey yields RES_NONE a second time") }
     }
 
-    fd_write(fd.writer, "\x1bO");
+    fd_write(writer_fd, "\x1bO");
     tk.advisereadable();
 
     tap.is_int(tk.get_buffer_remaining(), 254, "buffer free 254 after partial write");
@@ -932,7 +933,7 @@ fn test_05read()
         _ => { tap.bypass(1, "getkey yields RES_AGAIN after partial write") }
     }
 
-    fd_write(fd.writer, "C");
+    fd_write(writer_fd, "C");
     tk.advisereadable();
 
     match tk.getkey()
@@ -968,6 +969,8 @@ fn test_05read()
         }
         _ => tap.bypass(2, "getkey yields RES_ERROR after termkey_stop()")
     }
+
+    unsafe { libc::close(reader_fd); libc::close(writer_fd); }
 }
 
 #[test]
