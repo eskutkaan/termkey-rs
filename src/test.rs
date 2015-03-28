@@ -1,4 +1,4 @@
-#![feature(core)]
+#![feature(convert)]
 #![feature(int_uint)]
 #![feature(libc)]
 #![feature(old_io)]
@@ -113,10 +113,10 @@ mod taplib
                 diag!("got {} expected {} in: {}", got, expect, name);
             }
         }
-        pub fn is_str<T: Str, U: Str>(&mut self, got: T, expect: U, name: &str)
+        pub fn is_str<T: AsRef<str>, U: AsRef<str>>(&mut self, got: T, expect: U, name: &str)
         {
-            let got = got.as_slice();
-            let expect = expect.as_slice();
+            let got = got.as_ref();
+            let expect = expect.as_ref();
 
             if got == expect
             {
