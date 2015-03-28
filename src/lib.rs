@@ -1,7 +1,6 @@
 #![feature(collections)]
 #![feature(int_uint)]
 #![feature(libc)]
-#![feature(os)]
 
 #[macro_use]
 extern crate bitflags;
@@ -303,14 +302,13 @@ impl TermKeyEvent
     }
 }
 
-#[derive(Copy)]
 pub enum TermKeyResult
 {
     None_,
     Key(TermKeyEvent),
     Eof,
     Again,
-    Error{errno: c::c_int},
+    Error{err: ::std::io::Error},
 }
 impl TermKeyResult
 {
@@ -322,7 +320,7 @@ impl TermKeyResult
             c::TermKeyResult::TERMKEY_RES_KEY => TermKeyResult::Key(TermKeyEvent::from_c(tk, key)),
             c::TermKeyResult::TERMKEY_RES_EOF => TermKeyResult::Eof,
             c::TermKeyResult::TERMKEY_RES_AGAIN => TermKeyResult::Again,
-            c::TermKeyResult::TERMKEY_RES_ERROR => TermKeyResult::Error{errno: std::os::errno() as c::c_int},
+            c::TermKeyResult::TERMKEY_RES_ERROR => TermKeyResult::Error{err: ::std::io::Error::last_os_error()},
         }
     }
 }

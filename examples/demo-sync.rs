@@ -73,7 +73,7 @@ fn main()
                     _ => {}
                 }
             }
-            termkey::TermKeyResult::Error{errno: _} =>
+            termkey::TermKeyResult::Error{err: _} =>
             {
                 println!("Error of some sort")
             }

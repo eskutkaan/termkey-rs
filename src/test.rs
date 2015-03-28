@@ -962,10 +962,10 @@ fn test_05read()
 
     match tk.getkey()
     {
-        termkey::TermKeyResult::Error{errno} =>
+        termkey::TermKeyResult::Error{err} =>
         {
             tap.pass("getkey yields RES_ERROR after termkey_stop()");
-            tap.is_int(errno, libc::EINVAL, "getkey error is EINVAL");
+            tap.ok(err.kind() == ::std::io::ErrorKind::InvalidInput, "getkey error is EINVAL");
         }
         _ => tap.bypass(2, "getkey yields RES_ERROR after termkey_stop()")
     }
