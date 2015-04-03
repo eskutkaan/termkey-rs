@@ -1,4 +1,3 @@
-#![feature(int_uint)]
 #![feature(libc)]
 
 extern crate libc;
@@ -45,12 +44,12 @@ pub mod poll_
     }
 }
 
-pub fn poll_rd1(fd: int, waittime: int) -> int
+pub fn poll_rd1(fd: isize, waittime: isize) -> isize
 {
     let mut pfd = poll_::pollfd{fd: fd as c_int, events: poll_::POLLIN, revents: 0};
     unsafe
     {
-        poll_::poll(&mut pfd, 1, waittime as c_int) as int
+        poll_::poll(&mut pfd, 1, waittime as c_int) as isize
     }
 }
 

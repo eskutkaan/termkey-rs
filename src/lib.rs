@@ -1,5 +1,4 @@
 #![feature(collections)]
-#![feature(int_uint)]
 #![feature(libc)]
 
 #[macro_use]

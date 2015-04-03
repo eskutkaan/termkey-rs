@@ -1,5 +1,4 @@
 #![feature(convert)]
-#![feature(int_uint)]
 #![feature(libc)]
 
 extern crate libc;
