@@ -165,7 +165,7 @@ impl TermKey
     }
 }
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct Utf8Char
 {
     pub bytes: [c::c_char; 7],
@@ -199,7 +199,7 @@ impl Utf8Char
 }
 
 // called TermKeyKey in C
-#[derive(Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub enum TermKeyEvent
 {
     UnknownCsiEvent,

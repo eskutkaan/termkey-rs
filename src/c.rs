@@ -104,7 +104,7 @@ impl ::std::fmt::Display for TermKeySym
 }
 
 #[repr(C)]
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum TermKeyType
 {
   TERMKEY_TYPE_UNICODE,
@@ -118,7 +118,7 @@ pub enum TermKeyType
   TERMKEY_TYPE_UNKNOWN_CSI = -1
 }
 
-#[repr(C)] #[derive(Copy, PartialEq)]
+#[repr(C)] #[derive(Clone, Copy, PartialEq)]
 pub enum TermKeyResult
 {
   TERMKEY_RES_NONE,
@@ -128,7 +128,7 @@ pub enum TermKeyResult
   TERMKEY_RES_ERROR
 }
 
-#[repr(C)] #[derive(Copy, PartialEq, PartialOrd)]
+#[repr(C)] #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub enum TermKeyMouseEvent
 {
   TERMKEY_MOUSE_UNKNOWN,
@@ -165,7 +165,7 @@ impl ::std::fmt::Display for X_TermKey_KeyMod
 }
 
 #[repr(C)]
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct TermKeyKey
 {
   pub type_: TermKeyType,
@@ -274,7 +274,7 @@ impl TermKeyKey
     }
 }
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum TermKey {}
 
 bitflags!{ flags X_TermKey_Flag : c_int

@@ -31,7 +31,7 @@ pub mod poll_
 
     #[repr(C)]
     #[allow(non_camel_case_types)]
-    #[derive(Copy)]
+    #[derive(Clone, Copy)]
     pub struct pollfd
     {
         pub fd: c_int,
