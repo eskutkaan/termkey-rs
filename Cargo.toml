@@ -14,3 +14,4 @@ path = "src/test.rs"
 
 [dependencies]
 bitflags = "*"
+libc = "*"

@@ -1,7 +1,4 @@
-#![feature(libc)]
-
 extern crate libc;
-
 extern crate termkey;
 
 use libc::c_int;

@@ -1,5 +1,4 @@
 #![feature(collections)]
-#![feature(libc)]
 
 #[macro_use]
 extern crate bitflags;
