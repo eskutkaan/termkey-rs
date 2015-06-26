@@ -1,4 +1,4 @@
-#![feature(collections)]
+#![feature(slice_chars)]
 
 #[macro_use]
 extern crate bitflags;
