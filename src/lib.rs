@@ -1,10 +1,15 @@
-#![feature(slice_chars)]
+#![feature(core)]
+#![feature(core_str_ext)]
 
 #[macro_use]
 extern crate bitflags;
 
+extern crate core;
+
 extern crate libc;
 pub mod c;
+
+use core::str::StrExt;
 
 pub struct TermKey
 {
