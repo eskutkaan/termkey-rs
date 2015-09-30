@@ -1,15 +1,8 @@
-#![feature(core)]
-#![feature(core_str_ext)]
-
 #[macro_use]
 extern crate bitflags;
 
-extern crate core;
-
 extern crate libc;
 pub mod c;
-
-use core::str::StrExt;
 
 pub struct TermKey
 {
@@ -197,7 +190,9 @@ impl Utf8Char
         {
             let bytes: &[c::c_char] = &self.bytes;
             let bytes: &[u8] = ::std::mem::transmute(bytes);
-            ::std::str::from_utf8_unchecked(bytes).slice_chars(0, 1)
+            let string = ::std::str::from_utf8_unchecked(bytes);
+            let (_, first_char) = string.char_indices().next().unwrap();
+            string.slice_unchecked(0, first_char.len_utf8())
         }
     }
 }
