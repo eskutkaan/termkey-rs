@@ -7,9 +7,11 @@ build = "build.rs"
 [lib]
 name = "termkey"
 test = false
+doctest = false
 
 [[test]]
 name = "integration"
+doctest = false
 
 [dependencies]
 bitflags = "0.3.2"
