@@ -3,6 +3,9 @@ name = "termkey-rs"
 version = "0.17.0"
 authors = ["Ben Longbons <b.r.longbons@gmail.com>",
            "Mathias Hällman <github@mths.se>"]
+description = "Rust wrapper for libtermkey"
+license = "Unlicensed"
+repository = "https://github.com/mathall/termkey-rs"
 build = "build.rs"
 
 [lib]
