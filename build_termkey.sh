@@ -1,6 +1,11 @@
 #!/bin/bash
 
-if [ ! -d "termkey-c" ]; then
-  git clone --depth 1 git://github.com/mathall/libtermkey.git -b v0.17 termkey-c
+repository="git://github.com/mathall/libtermkey.git"
+git_ref="${1-master}"
+work_dir="termkey-c/$git_ref"
+
+if [ ! -d "$work_dir" ]; then
+  git clone --depth 1 $repository -b $git_ref $work_dir
 fi
-make -j2 -C termkey-c
+
+make -j2 -C $work_dir
