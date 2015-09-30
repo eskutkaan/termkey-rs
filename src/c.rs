@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 pub use libc::c_char;
+pub use libc::c_uchar;
 pub use libc::c_int;
 pub use libc::c_long;
 pub use libc::c_ulong;
@@ -244,33 +245,64 @@ impl TermKeyKey
             key
         }
     }
-    pub fn from_mouse(tk: *mut TermKey, mods: X_TermKey_KeyMod, ev: TermKeyMouseEvent, button: c_int, line: c_int, col: c_int) -> TermKeyKey
+    pub fn from_mouse(mods: X_TermKey_KeyMod, ev: TermKeyMouseEvent, button: c_int, line: c_int, col: c_int) -> TermKeyKey
     {
         unsafe
         {
             let mods: c_int = ::std::mem::transmute(mods);
-            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: mods, utf8: [0; 7]};
-            termkey_construct_mouse(tk, &mut key, ev, button, line, col);
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_MOUSE, code: 0, modifiers: mods, utf8: [0; 7]};
+            key.construct_mouse_code(ev, button, line, col);
             key
         }
     }
-    pub fn from_position(tk: *mut TermKey, line: c_int, col: c_int) -> TermKeyKey
+    pub fn from_position(line: c_int, col: c_int) -> TermKeyKey
     {
         unsafe
         {
-            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0; 7]};
-            termkey_construct_position(tk, &mut key, line, col);
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_POSITION, code: 0, modifiers: 0, utf8: [0; 7]};
+            key.set_linecol(line, col);
             key
         }
     }
-    pub fn from_mode_report(tk: *mut TermKey, initial: c_int, mode: c_int, value: c_int) -> TermKeyKey
+    pub fn from_mode_report(initial: c_int, mode: c_int, value: c_int) -> TermKeyKey
     {
         unsafe
         {
-            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_UNICODE, code: 0, modifiers: 0, utf8: [0; 7]};
-            termkey_construct_modereport(tk, &mut key, initial, mode, value);
+            let mut key = TermKeyKey{type_: TermKeyType::TERMKEY_TYPE_MODEREPORT, code: 0, modifiers: 0, utf8: [0; 7]};
+            key.construct_mode_report_code(initial, mode, value);
             key
         }
+    }
+    unsafe fn construct_mouse_code(&mut self, ev: TermKeyMouseEvent, button: c_int, line: c_int, col: c_int)
+    {
+      self.set_linecol(line, col);
+      let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+      fields[0] = match button
+        {
+          1 | 2 | 3 => button - 1,
+          4 | 5     => button - 4 + 64,
+          _         => 66,
+        } as c_char;
+      if ev == TermKeyMouseEvent::TERMKEY_MOUSE_DRAG { fields[0] |= 0x20; }
+      if ev == TermKeyMouseEvent::TERMKEY_MOUSE_RELEASE { fields[3] = (fields[3] as c_uchar | 0x80) as c_char; }
+    }
+    unsafe fn construct_mode_report_code(&mut self, initial: c_int, mode: c_int, value: c_int)
+    {
+      let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+      fields[0] = initial as c_char;
+      fields[1] = (mode >> 8) as c_char;
+      fields[2] = (mode & 0xff) as c_char;
+      fields[3] = value as c_char;
+    }
+    unsafe fn set_linecol(&mut self, mut line: c_int, mut col: c_int)
+    {
+      if col > 0xfff { col = 0xfff; }
+      if line > 0x7ff { line = 0x7ff; }
+
+      let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+      fields[1] = (col & 0x0ff) as c_char;
+      fields[2] = (line & 0x0ff) as c_char;
+      fields[3] = ((col & 0xf00) >> 8 | (line & 0x300) >> 4) as c_char;
     }
 }
 
@@ -361,13 +393,10 @@ pub fn termkey_lookup_keyname(tk: *mut TermKey, str: *const c_char, sym: *mut Te
 pub fn termkey_keyname2sym(tk: *mut TermKey, keyname: *const c_char) -> TermKeySym;
 
 pub fn termkey_interpret_mouse(tk: *mut TermKey, key: *const TermKeyKey, event: *mut TermKeyMouseEvent, button: *mut c_int, line: *mut c_int, col: *mut c_int) -> TermKeyResult;
-pub fn termkey_construct_mouse(tk: *mut TermKey, key: *mut TermKeyKey, event: TermKeyMouseEvent, button: c_int, line: c_int, col: c_int);
 
 pub fn termkey_interpret_position(tk: *mut TermKey, key: *const TermKeyKey, line: *mut c_int, col: *mut c_int) -> TermKeyResult;
-pub fn termkey_construct_position(tk: *mut TermKey, key: *mut TermKeyKey, line: c_int, col: c_int);
 
 pub fn termkey_interpret_modereport(tk: *mut TermKey, key: *const TermKeyKey, initial: *mut c_int, mode: *mut c_int, value: *mut c_int) -> TermKeyResult;
-pub fn termkey_construct_modereport(tk: *mut TermKey, key: *mut TermKeyKey, initial: c_int, mode: c_int, value: c_int);
 
 pub fn termkey_interpret_csi(tk: *mut TermKey, key: *const TermKeyKey, args: *mut c_long, nargs: *mut size_t, cmd: *mut c_ulong) -> TermKeyResult;
 

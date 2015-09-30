@@ -437,15 +437,15 @@ impl TermKey
             }
             TermKeyEvent::MouseEvent{ev, mods, button, line, col} =>
             {
-                c::TermKeyKey::from_mouse(self.tk, mods, ev, button as c::c_int, line as c::c_int, col as c::c_int)
+                c::TermKeyKey::from_mouse(mods, ev, button as c::c_int, line as c::c_int, col as c::c_int)
             }
             TermKeyEvent::PositionEvent{line, col} =>
             {
-                c::TermKeyKey::from_position(self.tk, line as c::c_int, col as c::c_int)
+                c::TermKeyKey::from_position(line as c::c_int, col as c::c_int)
             }
             TermKeyEvent::ModeReportEvent{initial, mode, value} =>
             {
-                c::TermKeyKey::from_mode_report(self.tk, initial as c::c_int, mode as c::c_int, value as c::c_int)
+                c::TermKeyKey::from_mode_report(initial as c::c_int, mode as c::c_int, value as c::c_int)
             }
             TermKeyEvent::UnknownCsiEvent =>
             {
