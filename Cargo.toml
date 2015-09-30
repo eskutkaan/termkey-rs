@@ -10,7 +10,6 @@ test = false
 
 [[test]]
 name = "integration"
-path = "src/test.rs"
 
 [dependencies]
 bitflags = "0.3.2"
