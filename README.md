@@ -1,7 +1,3 @@
-This is a wrapper for libtermkey by LeoNerd.
+# termkey-rs [![Build Status](https://travis-ci.org/mathall/termkey-rs.svg?branch=master)](https://travis-ci.org/mathall/termkey-rs)
 
-Unsupported Features:
-- registering new keysym names (not supposed to be public anyway)
-- strfkey of non-key events
-- comparison across canonicalization flags (e.g. for space)
-- full unknown csi sequence info
+This is a wrapper for libtermkey by LeoNerd.
