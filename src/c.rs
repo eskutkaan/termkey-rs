@@ -148,7 +148,7 @@ impl ::std::fmt::Display for TermKeyMouseEvent
     }
 }
 
-bitflags!{ flags X_TermKey_KeyMod: c_int
+bitflags!{ pub flags X_TermKey_KeyMod: ::libc::c_int
 {
   const TERMKEY_KEYMOD_SHIFT = 1 << 0,
   const TERMKEY_KEYMOD_ALT   = 1 << 1,
@@ -309,7 +309,7 @@ impl TermKeyKey
 #[derive(Clone, Copy)]
 pub enum TermKey {}
 
-bitflags!{ flags X_TermKey_Flag : c_int
+bitflags!{ pub flags X_TermKey_Flag : ::libc::c_int
 {
   const TERMKEY_FLAG_NOINTERPRET = 1 << 0, /* Do not interpret C0//DEL codes if possible */
   const TERMKEY_FLAG_CONVERTKP   = 1 << 1, /* Convert KP codes to regular keypresses */
@@ -321,13 +321,13 @@ bitflags!{ flags X_TermKey_Flag : c_int
   const TERMKEY_FLAG_EINTR       = 1 << 7  /* Return ERROR on signal (EINTR) rather than retry */
 }}
 
-bitflags!{ flags X_TermKey_Canon : c_int
+bitflags!{ pub flags X_TermKey_Canon : ::libc::c_int
 {
   const TERMKEY_CANON_SPACESYMBOL = 1 << 0, /* Space is symbolic rather than Unicode */
   const TERMKEY_CANON_DELBS       = 1 << 1  /* Del is converted to Backspace */
 }}
 
-bitflags!{ #[repr(C)] flags TermKeyFormat : c_int
+bitflags!{ #[repr(C)] pub flags TermKeyFormat : ::libc::c_int
 {
   const TERMKEY_FORMAT_LONGMOD     = 1 << 0, /* Shift-... instead of S-... */
   const TERMKEY_FORMAT_CARETCTRL   = 1 << 1, /* ^X instead of C-X */
