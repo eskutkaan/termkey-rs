@@ -48,12 +48,12 @@ pub fn poll_rd1(fd: isize, waittime: isize) -> isize {
 }
 
 fn on_key(tk: &mut termkey::TermKey, key: termkey::TermKeyEvent) {
-    let s = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_VIM);
+    let s = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_VIM);
     println!("{}", s);
 }
 
 fn main() {
-    let mut tk = termkey::TermKey::new(0, termkey::c::TERMKEY_FLAG_CTRLC);
+    let mut tk = termkey::TermKey::new(0, termkey::c::X_TermKey_Flag::TERMKEY_FLAG_CTRLC);
     let mut running: bool = true;
     let mut nextwait = -1;
 
@@ -78,7 +78,8 @@ fn main() {
                             codepoint,
                             utf8: _,
                         } => {
-                            if !(mods & termkey::c::TERMKEY_KEYMOD_CTRL).is_empty()
+                            if !(mods & termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL)
+                                .is_empty()
                                 && (codepoint == 'C' || codepoint == 'c')
                             {
                                 running = false;

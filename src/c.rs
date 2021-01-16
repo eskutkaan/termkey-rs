@@ -141,11 +141,11 @@ impl ::std::fmt::Display for TermKeyMouseEvent {
     }
 }
 
-bitflags! { pub flags X_TermKey_KeyMod: ::libc::c_int
+bitflags! { pub struct X_TermKey_KeyMod: ::libc::c_int
 {
-  const TERMKEY_KEYMOD_SHIFT = 1 << 0,
-  const TERMKEY_KEYMOD_ALT   = 1 << 1,
-  const TERMKEY_KEYMOD_CTRL  = 1 << 2
+  const TERMKEY_KEYMOD_SHIFT = 1 << 0;
+  const TERMKEY_KEYMOD_ALT   = 1 << 1;
+  const TERMKEY_KEYMOD_CTRL  = 1 << 2;
 }}
 
 impl ::std::fmt::Display for X_TermKey_KeyMod {
@@ -334,40 +334,43 @@ impl TermKeyKey {
 #[derive(Clone, Copy)]
 pub enum TermKey {}
 
-bitflags! { pub flags X_TermKey_Flag : ::libc::c_int
+bitflags! { pub struct X_TermKey_Flag : ::libc::c_int
 {
-  const TERMKEY_FLAG_NOINTERPRET = 1 << 0, /* Do not interpret C0//DEL codes if possible */
-  const TERMKEY_FLAG_CONVERTKP   = 1 << 1, /* Convert KP codes to regular keypresses */
-  const TERMKEY_FLAG_RAW         = 1 << 2, /* Input is raw bytes, not UTF-8 */
-  const TERMKEY_FLAG_UTF8        = 1 << 3, /* Input is definitely UTF-8 */
-  const TERMKEY_FLAG_NOTERMIOS   = 1 << 4, /* Do not make initial termios calls on construction */
-  const TERMKEY_FLAG_SPACESYMBOL = 1 << 5, /* Sets TERMKEY_CANON_SPACESYMBOL */
-  const TERMKEY_FLAG_CTRLC       = 1 << 6, /* Allow Ctrl-C to be read as normal, disabling SIGINT */
-  const TERMKEY_FLAG_EINTR       = 1 << 7  /* Return ERROR on signal (EINTR) rather than retry */
+  const TERMKEY_FLAG_NOINTERPRET = 1 << 0; /* Do not interpret C0//DEL codes if possible */
+  const TERMKEY_FLAG_CONVERTKP   = 1 << 1; /* Convert KP codes to regular keypresses */
+  const TERMKEY_FLAG_RAW         = 1 << 2; /* Input is raw bytes, not UTF-8 */
+  const TERMKEY_FLAG_UTF8        = 1 << 3; /* Input is definitely UTF-8 */
+  const TERMKEY_FLAG_NOTERMIOS   = 1 << 4; /* Do not make initial termios calls on construction */
+  const TERMKEY_FLAG_SPACESYMBOL = 1 << 5; /* Sets X_TermKey_Canon::TERMKEY_CANON_SPACESYMBOL */
+  const TERMKEY_FLAG_CTRLC       = 1 << 6; /* Allow Ctrl-C to be read as normal, disabling SIGINT */
+  const TERMKEY_FLAG_EINTR       = 1 << 7; /* Return ERROR on signal (EINTR) rather than retry */
 }}
 
-bitflags! { pub flags X_TermKey_Canon : ::libc::c_int
+bitflags! { pub struct X_TermKey_Canon : ::libc::c_int
 {
-  const TERMKEY_CANON_SPACESYMBOL = 1 << 0, /* Space is symbolic rather than Unicode */
-  const TERMKEY_CANON_DELBS       = 1 << 1  /* Del is converted to Backspace */
+  const TERMKEY_CANON_SPACESYMBOL = 1 << 0; /* Space is symbolic rather than Unicode */
+  const TERMKEY_CANON_DELBS       = 1 << 1; /* Del is converted to Backspace */
 }}
 
-bitflags! { #[repr(C)] pub flags TermKeyFormat : ::libc::c_int
+bitflags! { #[repr(C)] pub struct TermKeyFormat : ::libc::c_int
 {
-  const TERMKEY_FORMAT_LONGMOD     = 1 << 0, /* Shift-... instead of S-... */
-  const TERMKEY_FORMAT_CARETCTRL   = 1 << 1, /* ^X instead of C-X */
-  const TERMKEY_FORMAT_ALTISMETA   = 1 << 2, /* Meta- or M- instead of Alt- or A- */
-  const TERMKEY_FORMAT_WRAPBRACKET = 1 << 3, /* Wrap special keys in brackets like <Escape> */
-  const TERMKEY_FORMAT_SPACEMOD    = 1 << 4, /* M Foo instead of M-Foo */
-  const TERMKEY_FORMAT_LOWERMOD    = 1 << 5, /* meta or m instead of Meta or M */
-  const TERMKEY_FORMAT_LOWERSPACE  = 1 << 6, /* page down instead of PageDown */
+  const TERMKEY_FORMAT_LONGMOD     = 1 << 0; /* Shift-... instead of S-... */
+  const TERMKEY_FORMAT_CARETCTRL   = 1 << 1; /* ^X instead of C-X */
+  const TERMKEY_FORMAT_ALTISMETA   = 1 << 2; /* Meta- or M- instead of Alt- or A- */
+  const TERMKEY_FORMAT_WRAPBRACKET = 1 << 3; /* Wrap special keys in brackets like <Escape> */
+  const TERMKEY_FORMAT_SPACEMOD    = 1 << 4; /* M Foo instead of M-Foo */
+  const TERMKEY_FORMAT_LOWERMOD    = 1 << 5; /* meta or m instead of Meta or M */
+  const TERMKEY_FORMAT_LOWERSPACE  = 1 << 6; /* page down instead of PageDown */
 
-  const TERMKEY_FORMAT_MOUSE_POS   = 1 << 8, /* Include mouse position if relevant; @ col,line */
+  const TERMKEY_FORMAT_MOUSE_POS   = 1 << 8; /* Include mouse position if relevant; @ col,line */
 
 /* Some useful combinations */
-  const TERMKEY_FORMAT_VIM         = (TERMKEY_FORMAT_ALTISMETA.bits|TERMKEY_FORMAT_WRAPBRACKET.bits),
-  const TERMKEY_FORMAT_URWID       = (TERMKEY_FORMAT_LONGMOD.bits|TERMKEY_FORMAT_ALTISMETA.bits|
-          TERMKEY_FORMAT_LOWERMOD.bits|TERMKEY_FORMAT_SPACEMOD.bits|TERMKEY_FORMAT_LOWERSPACE.bits)
+  const TERMKEY_FORMAT_VIM         = (TermKeyFormat::TERMKEY_FORMAT_ALTISMETA.bits|
+      TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET.bits);
+  const TERMKEY_FORMAT_URWID       = (TermKeyFormat::TERMKEY_FORMAT_LONGMOD.bits|
+      TermKeyFormat::TERMKEY_FORMAT_ALTISMETA.bits|
+      TermKeyFormat::TERMKEY_FORMAT_LOWERMOD.bits|TermKeyFormat::TERMKEY_FORMAT_SPACEMOD.bits|
+      TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE.bits);
 }}
 
 // Better to handle in makefile

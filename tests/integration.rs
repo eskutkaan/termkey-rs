@@ -212,7 +212,7 @@ fn test_02getkey() {
                     tap.pass("key.type after C-a");
                     tap.is_int(codepoint, 'a', "key.code.number after C-a");
                     tap.ok(
-                        mods == termkey::c::TERMKEY_KEYMOD_CTRL,
+                        mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                         "key.modifiers after C-a",
                     );
                 }
@@ -299,7 +299,7 @@ fn test_02getkey() {
                         "key.code.sym after Ctrl-Escape",
                     );
                     tap.ok(
-                        mods == termkey::c::TERMKEY_KEYMOD_CTRL,
+                        mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                         "key.modifiers after Ctrl-Escape",
                     );
                 }
@@ -315,7 +315,8 @@ fn test_03utf8() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(57);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::TERMKEY_FLAG_UTF8);
+    let mut tk =
+        termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::TERMKEY_FLAG_UTF8);
 
     tk.push_bytes("a".as_bytes());
     match tk.getkey() {
@@ -815,7 +816,7 @@ fn test_04flags() {
         _ => tap.bypass(4, "getkey yields RES_KEY after space"),
     }
 
-    tk.set_flags(termkey::c::TERMKEY_FLAG_SPACESYMBOL);
+    tk.set_flags(termkey::c::X_TermKey_Flag::TERMKEY_FLAG_SPACESYMBOL);
 
     tk.push_bytes(" ".as_bytes());
     match tk.getkey() {
@@ -869,7 +870,10 @@ fn test_05read() {
     /* Sanitise this just in case */
     std::env::set_var("TERM", "vt100");
 
-    let mut tk = termkey::TermKey::new(reader_fd, termkey::c::TERMKEY_FLAG_NOTERMIOS);
+    let mut tk = termkey::TermKey::new(
+        reader_fd,
+        termkey::c::X_TermKey_Flag::TERMKEY_FLAG_NOTERMIOS,
+    );
 
     tap.is_int(tk.get_buffer_remaining(), 256, "buffer free initially 256");
 
@@ -1134,13 +1138,13 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 1, "length for unicode/A/0");
     tap.is_str(buffer, "A", "buffer for unicode/A/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
     tap.is_int(buffer.len(), 1, "length for unicode/A/0 wrapbracket");
     tap.is_str(buffer, "A", "buffer for unicode/A/0 wrapbracket");
 
     let key: termkey::TermKeyEvent = termkey::TermKeyEvent::UnicodeEvent {
         codepoint: 'b',
-        mods: termkey::c::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
         utf8: termkey::Utf8Char {
             bytes: [0, 0, 0, 0, 0, 0, 0],
         },
@@ -1150,13 +1154,14 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 3, "length for unicode/b/CTRL");
     tap.is_str(buffer, "C-b", "buffer for unicode/b/CTRL");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_LONGMOD);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD);
     tap.is_int(buffer.len(), 6, "length for unicode/b/CTRL longmod");
     tap.is_str(buffer, "Ctrl-b", "buffer for unicode/b/CTRL longmod");
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TERMKEY_FORMAT_LONGMOD | termkey::c::TERMKEY_FORMAT_SPACEMOD,
+        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1171,7 +1176,8 @@ fn test_11strfkey() {
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TERMKEY_FORMAT_LONGMOD | termkey::c::TERMKEY_FORMAT_LOWERMOD,
+        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1186,9 +1192,9 @@ fn test_11strfkey() {
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TERMKEY_FORMAT_LONGMOD
-            | termkey::c::TERMKEY_FORMAT_SPACEMOD
-            | termkey::c::TERMKEY_FORMAT_LOWERMOD,
+        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
+            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1201,17 +1207,17 @@ fn test_11strfkey() {
         "buffer for unicode/b/CTRL longmod|spacemod|lowermode",
     );
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_CARETCTRL);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_CARETCTRL);
     tap.is_int(buffer.len(), 2, "length for unicode/b/CTRL caretctrl");
     tap.is_str(buffer, "^B", "buffer for unicode/b/CTRL caretctrl");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
     tap.is_int(buffer.len(), 5, "length for unicode/b/CTRL wrapbracket");
     tap.is_str(buffer, "<C-b>", "buffer for unicode/b/CTRL wrapbracket");
 
     let key: termkey::TermKeyEvent = termkey::TermKeyEvent::UnicodeEvent {
         codepoint: 'c',
-        mods: termkey::c::TERMKEY_KEYMOD_ALT,
+        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
         utf8: termkey::Utf8Char {
             bytes: [0, 0, 0, 0, 0, 0, 0],
         },
@@ -1221,17 +1227,18 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 3, "length for unicode/c/ALT");
     tap.is_str(buffer, "A-c", "buffer for unicode/c/ALT");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_LONGMOD);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD);
     tap.is_int(buffer.len(), 5, "length for unicode/c/ALT longmod");
     tap.is_str(buffer, "Alt-c", "buffer for unicode/c/ALT longmod");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_ALTISMETA);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA);
     tap.is_int(buffer.len(), 3, "length for unicode/c/ALT altismeta");
     tap.is_str(buffer, "M-c", "buffer for unicode/c/ALT altismeta");
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TERMKEY_FORMAT_LONGMOD | termkey::c::TERMKEY_FORMAT_ALTISMETA,
+        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA,
     );
     tap.is_int(
         buffer.len(),
@@ -1253,7 +1260,7 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 2, "length for sym/Up/0");
     tap.is_str(buffer, "Up", "buffer for sym/Up/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
     tap.is_int(buffer.len(), 4, "length for sym/Up/0 wrapbracket");
     tap.is_str(buffer, "<Up>", "buffer for sym/Up/0 wrapbracket");
 
@@ -1266,7 +1273,7 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 6, "length for sym/PageUp/0");
     tap.is_str(buffer, "PageUp", "buffer for sym/PageUp/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_LOWERSPACE);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE);
     tap.is_int(buffer.len(), 7, "length for sym/PageUp/0 lowerspace");
     tap.is_str(buffer, "page up", "buffer for sym/PageUp/0 lowerspace");
 
@@ -1283,7 +1290,10 @@ fn test_11strfkey() {
         tap.is_int(buffer.len(), 6, "length for sym/PageUp/0");
         tap.is_str(buffer, "Pag", "buffer of len 4 for sym/PageUp/0");
 
-        let buffer = tk.strfkey(/*4*/ key, termkey::c::TERMKEY_FORMAT_LOWERSPACE);
+        let buffer = tk.strfkey(
+            /*4*/ key,
+            termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE,
+        );
         tap.is_int(buffer.len(), 7, "length for sym/PageUp/0 lowerspace");
         tap.is_str(buffer, "pag", "buffer of len 4 for sym/PageUp/0 lowerspace");
     }
@@ -1297,11 +1307,11 @@ fn test_11strfkey() {
     tap.is_int(buffer.len(), 2, "length for func/5/0");
     tap.is_str(buffer, "F5", "buffer for func/5/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
     tap.is_int(buffer.len(), 4, "length for func/5/0 wrapbracket");
     tap.is_str(buffer, "<F5>", "buffer for func/5/0 wrapbracket");
 
-    let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_LOWERSPACE);
+    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE);
     tap.is_int(buffer.len(), 2, "length for func/5/0 lowerspace");
     tap.is_str(buffer, "f5", "buffer for func/5/0 lowerspace");
 }
@@ -1370,7 +1380,7 @@ fn test_12strpkey() {
                 tap.pass("key.type for unicode/b/CTRL");
                 tap.is_int(codepoint, 'b', "key.code.codepoint for unicode/b/CTRL");
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                     "key.modifiers for unicode/b/CTRL",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL");
@@ -1381,7 +1391,7 @@ fn test_12strpkey() {
     }
     {
         let (key, endp) = tk
-            .strpkey("Ctrl-b", termkey::c::TERMKEY_FORMAT_LONGMOD)
+            .strpkey("Ctrl-b", termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD)
             .unwrap();
         match key {
             termkey::TermKeyEvent::UnicodeEvent {
@@ -1396,7 +1406,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/b/CTRL longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                     "key.modifiers for unicode/b/CTRL longmod",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL longmod");
@@ -1407,7 +1417,7 @@ fn test_12strpkey() {
     }
     {
         let (key, endp) = tk
-            .strpkey("^B", termkey::c::TERMKEY_FORMAT_CARETCTRL)
+            .strpkey("^B", termkey::c::TermKeyFormat::TERMKEY_FORMAT_CARETCTRL)
             .unwrap();
         match key {
             termkey::TermKeyEvent::UnicodeEvent {
@@ -1422,7 +1432,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/b/CTRL caretctrl",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                     "key.modifiers for unicode/b/CTRL caretctrl",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL caretctrl");
@@ -1448,7 +1458,7 @@ fn test_12strpkey() {
                 tap.pass("key.type for unicode/c/ALT");
                 tap.is_int(codepoint, 'c', "key.code.codepoint for unicode/c/ALT");
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
                     "key.modifiers for unicode/c/ALT",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT");
@@ -1459,7 +1469,7 @@ fn test_12strpkey() {
     }
     {
         let (key, endp) = tk
-            .strpkey("Alt-c", termkey::c::TERMKEY_FORMAT_LONGMOD)
+            .strpkey("Alt-c", termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD)
             .unwrap();
         match key {
             termkey::TermKeyEvent::UnicodeEvent {
@@ -1474,7 +1484,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
                     "key.modifiers for unicode/c/ALT longmod",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT longmod");
@@ -1485,7 +1495,7 @@ fn test_12strpkey() {
     }
     {
         let (key, endp) = tk
-            .strpkey("M-c", termkey::c::TERMKEY_FORMAT_ALTISMETA)
+            .strpkey("M-c", termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA)
             .unwrap();
         match key {
             termkey::TermKeyEvent::UnicodeEvent {
@@ -1500,7 +1510,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
                     "key.modifiers for unicode/c/ALT altismeta",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT altismeta");
@@ -1517,7 +1527,8 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "Meta-c",
-                termkey::c::TERMKEY_FORMAT_ALTISMETA | termkey::c::TERMKEY_FORMAT_LONGMOD,
+                termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD,
             )
             .unwrap();
         match key {
@@ -1533,7 +1544,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta+longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
                     "key.modifiers for unicode/c/ALT altismeta+longmod",
                 );
                 tap.is_str(
@@ -1554,10 +1565,10 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "meta c",
-                termkey::c::TERMKEY_FORMAT_ALTISMETA
-                    | termkey::c::TERMKEY_FORMAT_LONGMOD
-                    | termkey::c::TERMKEY_FORMAT_SPACEMOD
-                    | termkey::c::TERMKEY_FORMAT_LOWERMOD,
+                termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
             )
             .unwrap();
         match key {
@@ -1573,7 +1584,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta+long/space+lowermod",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
                     "key.modifiers for unicode/c/ALT altismeta+long/space+lowermod",
                 );
                 tap.is_str(
@@ -1597,10 +1608,10 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "ctrl alt page up",
-                termkey::c::TERMKEY_FORMAT_LONGMOD
-                    | termkey::c::TERMKEY_FORMAT_SPACEMOD
-                    | termkey::c::TERMKEY_FORMAT_LOWERMOD
-                    | termkey::c::TERMKEY_FORMAT_LOWERSPACE,
+                termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD
+                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE,
             )
             .unwrap();
         match key {
@@ -1612,7 +1623,8 @@ fn test_12strpkey() {
                     "key.code.codepoint for sym/PageUp/CTRL+ALT long/space/lowermod+lowerspace",
                 );
                 tap.ok(
-                    mods == termkey::c::TERMKEY_KEYMOD_ALT | termkey::c::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT
+                        | termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                     "key.modifiers for sym/PageUp/CTRL+ALT long/space/lowermod+lowerspace",
                 );
             }
@@ -1689,7 +1701,7 @@ fn test_13cmpkey() {
 
     key2 = termkey::TermKeyEvent::UnicodeEvent {
         codepoint: 'A',
-        mods: termkey::c::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
@@ -1707,7 +1719,7 @@ fn test_13cmpkey() {
 
     key1 = termkey::TermKeyEvent::UnicodeEvent {
         codepoint: 'A',
-        mods: termkey::c::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
@@ -1744,7 +1756,7 @@ fn test_13cmpkey() {
         // Rust is being too smart for its own good, and forbids multiple
         // borrows in one line, even though only one borrow happens at a time.
         let cflags = tk.get_canonflags();
-        tk.set_canonflags(cflags | termkey::c::TERMKEY_CANON_SPACESYMBOL);
+        tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_SPACESYMBOL);
         tap.ok(
             key1 == key2,
             "cmpkey considers KEYSYM/SPACE and UNICODE/SP identical under SPACESYMBOL",
@@ -1796,7 +1808,7 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for Space/unicode");
     }
     let cflags = tk.get_canonflags();
-    tk.set_canonflags(cflags | termkey::c::TERMKEY_CANON_SPACESYMBOL);
+    tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_SPACESYMBOL);
     {
         let (key, endp) = tk.strpkey(" ", termkey::c::TermKeyFormat::empty()).unwrap();
         match key {
@@ -1850,7 +1862,7 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for Del/unconverted");
     }
     let cflags = tk.get_canonflags();
-    tk.set_canonflags(cflags | termkey::c::TERMKEY_CANON_DELBS);
+    tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_DELBS);
     {
         let (key, endp) = tk
             .strpkey("DEL", termkey::c::TermKeyFormat::empty())
@@ -1911,7 +1923,8 @@ fn test_30mouse() {
                         tap.is_int(buffer.len(), 13, "string length for press");
                         tap.is_str(buffer, "MousePress(1)", "string buffer for press");
 
-                        let buffer = tk.strfkey(key, termkey::c::TERMKEY_FORMAT_MOUSE_POS);
+                        let buffer =
+                            tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_MOUSE_POS);
                         tap.is_int(buffer.len(), 21, "string length for press");
                         tap.is_str(buffer, "MousePress(1) @ (1,1)", "string buffer for press");
                     }
@@ -2003,7 +2016,7 @@ fn test_30mouse() {
                     tap.is_int(col, 11, "mouse column for Ctrl-press");
                     tap.is_int(
                         mods,
-                        termkey::c::TERMKEY_KEYMOD_CTRL,
+                        termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
                         "modifiers for Ctrl-press",
                     );
 
