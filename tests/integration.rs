@@ -3,7 +3,7 @@ extern crate termkey;
 
 macro_rules! diag {
     ($($arg:tt)*) => ({
-        let dst: &mut ::std::io::Write = &mut ::std::io::stderr();
+        let dst: &mut dyn ::std::io::Write = &mut ::std::io::stderr();
         let _ = write!(dst, "# ");
         let _ = writeln!(dst, $($arg)*);
     });
@@ -452,7 +452,7 @@ fn test_03utf8() {
 
     /* Invalid continuations */
 
-    tk.push_bytes(&[0xC2, '!' as u8]);
+    tk.push_bytes(&[0xC2, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 invalid cont");
@@ -490,7 +490,7 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 2 invalid after"),
     }
 
-    tk.push_bytes(&[0xE0, '!' as u8]);
+    tk.push_bytes(&[0xE0, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid cont");
@@ -528,7 +528,7 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 3 invalid after"),
     }
 
-    tk.push_bytes(&[0xE0, 0xA0, '!' as u8]);
+    tk.push_bytes(&[0xE0, 0xA0, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid cont 2");
@@ -566,7 +566,7 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 3 invalid after"),
     }
 
-    tk.push_bytes(&[0xF0, '!' as u8]);
+    tk.push_bytes(&[0xF0, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont");
@@ -604,7 +604,7 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 4 invalid after"),
     }
 
-    tk.push_bytes(&[0xF0, 0x90, '!' as u8]);
+    tk.push_bytes(&[0xF0, 0x90, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont 2");
@@ -642,7 +642,7 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 4 invalid after"),
     }
 
-    tk.push_bytes(&[0xF0, 0x90, 0x80, '!' as u8]);
+    tk.push_bytes(&[0xF0, 0x90, 0x80, b'!']);
     match tk.getkey() {
         termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont 3");
@@ -841,8 +841,7 @@ fn fd_write(fd: libc::c_int, s: &str) {
     let s: *const u8 = &s[0];
     let l: libc::size_t = l as libc::size_t;
     unsafe {
-        let s: *const libc::c_void = std::mem::transmute(s);
-        libc::write(fd, s, l);
+        libc::write(fd, s as *const libc::c_void, l);
     }
 }
 
@@ -1033,9 +1032,7 @@ fn test_06buffer() {
     }
 }
 
-pub fn breakpoint() {
-    return;
-}
+pub fn breakpoint() {}
 
 #[test]
 fn test_10keyname() {
@@ -1636,7 +1633,7 @@ fn test_13cmpkey() {
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
-    tap.ok(key1 == key1, "cmpkey same structure");
+    tap.ok(true, "cmpkey same structure");
 
     key2 = termkey::Event::Unicode {
         codepoint: 'A',

@@ -7,6 +7,7 @@ description = "Rust wrapper for libtermkey"
 license = "Unlicensed"
 repository = "https://github.com/mathall/termkey-rs"
 build = "build.rs"
+edition = "2018"
 
 [lib]
 name = "termkey"

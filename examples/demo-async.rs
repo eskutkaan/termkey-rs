@@ -60,9 +60,8 @@ fn main() {
     while running {
         let p = poll_rd1(0, nextwait);
         if p == 0 {
-            match tk.getkey_force() {
-                termkey::Result::Key(key) => on_key(&mut tk, key),
-                _ => {}
+            if let termkey::Result::Key(key) = tk.getkey_force() {
+                on_key(&mut tk, key);
             }
         }
         if p > 0 {
@@ -72,19 +71,17 @@ fn main() {
             match tk.getkey() {
                 termkey::Result::Key(key) => {
                     on_key(&mut tk, key);
-                    match key {
-                        termkey::Event::Unicode {
-                            mods,
-                            codepoint,
-                            utf8: _,
-                        } => {
-                            if !(mods & termkey::c::KeyMod::CTRL).is_empty()
-                                && (codepoint == 'C' || codepoint == 'c')
-                            {
-                                running = false;
-                            }
+                    if let termkey::Event::Unicode {
+                        mods,
+                        codepoint,
+                        utf8: _,
+                    } = key
+                    {
+                        if !(mods & termkey::c::KeyMod::CTRL).is_empty()
+                            && (codepoint == 'C' || codepoint == 'c')
+                        {
+                            running = false;
                         }
-                        _ => {}
                     }
                 }
                 termkey::Result::Again => {

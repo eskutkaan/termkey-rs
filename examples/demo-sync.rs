@@ -54,23 +54,21 @@ fn main() {
                     }
                     _ => {}
                 }
-                match key {
-                    termkey::Event::Unicode {
-                        mods,
-                        codepoint,
-                        utf8: _,
-                    } => {
-                        if !(mods & termkey::c::KeyMod::CTRL).is_empty()
-                            && (codepoint == 'C' || codepoint == 'c')
-                        {
-                            break;
-                        }
-                        if mods.is_empty() && codepoint == '?' {
-                            // println!("\x1b[?6n"); // DECDSR 6 == request cursor position
-                            println!("\x1b[?1$p"); // DECRQM == request mode, DEC origin mode
-                        }
+                if let termkey::Event::Unicode {
+                    mods,
+                    codepoint,
+                    utf8: _,
+                } = key
+                {
+                    if !(mods & termkey::c::KeyMod::CTRL).is_empty()
+                        && (codepoint == 'C' || codepoint == 'c')
+                    {
+                        break;
                     }
-                    _ => {}
+                    if mods.is_empty() && codepoint == '?' {
+                        // println!("\x1b[?6n"); // DECDSR 6 == request cursor position
+                        println!("\x1b[?1$p"); // DECRQM == request mode, DEC origin mode
+                    }
                 }
             }
             termkey::Result::Error { err: _ } => {

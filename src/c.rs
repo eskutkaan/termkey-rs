@@ -9,6 +9,7 @@ pub use libc::size_t;
 
 pub static VERSION_MAJOR: c_int = 0;
 pub static VERSION_MINOR: c_int = 17;
+/// # Safety
 #[allow(non_snake_case)]
 pub unsafe fn CHECK_VERSION() {
     termkey_check_version(VERSION_MAJOR, VERSION_MINOR);
@@ -187,16 +188,19 @@ impl ::std::default::Default for Key {
     }
 }
 impl Key {
+    /// # Safety
     pub unsafe fn codepoint(&self) -> c_long {
         self.code
     }
+    /// # Safety
     pub unsafe fn num(&self) -> c_int {
-        let s: &c_int = ::std::mem::transmute(&self.code);
+        let s: &c_int = &*(&self.code as *const i64 as *const i32);
         *s
     }
+    /// # Safety
     pub unsafe fn sym(&self) -> Sym {
-        let s: &Sym = ::std::mem::transmute(&self.code);
-        s.clone()
+        let s: &Sym = &*(&self.code as *const i64 as *const Sym);
+        *s
     }
 }
 impl Key {
@@ -208,7 +212,7 @@ impl Key {
                 type_: Type::UNICODE,
                 code: codepoint,
                 modifiers: mods,
-                utf8: utf8,
+                utf8,
             }
         }
     }
@@ -222,7 +226,7 @@ impl Key {
                 modifiers: mods,
                 utf8: [0; 7],
             };
-            let code: &mut c_int = ::std::mem::transmute(&mut key.code);
+            let code: &mut c_int = &mut *(&mut key.code as *mut i64 as *mut i32);
             *code = num;
             key
         }
@@ -236,7 +240,7 @@ impl Key {
                 modifiers: mods,
                 utf8: [0; 7],
             };
-            let code: &mut Sym = ::std::mem::transmute(&mut key.code);
+            let code: &mut Sym = &mut *(&mut key.code as *mut i64 as *mut Sym);
             *code = sym;
             key
         }
@@ -286,7 +290,7 @@ impl Key {
         col: c_int,
     ) {
         self.set_linecol(line, col);
-        let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+        let fields: &mut [c_char; 4] = &mut *(&mut self.code as *mut i64 as *mut [i8; 4]);
         fields[0] = match button {
             1 | 2 | 3 => button - 1,
             4 | 5 => button - 4 + 64,
@@ -300,7 +304,7 @@ impl Key {
         }
     }
     unsafe fn construct_mode_report_code(&mut self, initial: c_int, mode: c_int, value: c_int) {
-        let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+        let fields: &mut [c_char; 4] = &mut *(&mut self.code as *mut i64 as *mut [i8; 4]);
         fields[0] = initial as c_char;
         fields[1] = (mode >> 8) as c_char;
         fields[2] = (mode & 0xff) as c_char;
@@ -314,7 +318,7 @@ impl Key {
             line = 0x7ff;
         }
 
-        let fields: &mut [c_char; 4] = ::std::mem::transmute(&mut self.code);
+        let fields: &mut [c_char; 4] = &mut *(&mut self.code as *mut i64 as *mut [i8; 4]);
         fields[1] = (col & 0x0ff) as c_char;
         fields[2] = (line & 0x0ff) as c_char;
         fields[3] = ((col & 0xf00) >> 8 | (line & 0x300) >> 4) as c_char;
@@ -331,7 +335,7 @@ bitflags! { pub struct Flag : ::libc::c_int
   const RAW         = 1 << 2; /* Input is raw bytes, not UTF-8 */
   const UTF8        = 1 << 3; /* Input is definitely UTF-8 */
   const NOTERMIOS   = 1 << 4; /* Do not make initial termios calls on construction */
-  const SPACESYMBOL = 1 << 5; /* Sets Canon::SPACESYMBOL */
+  const SPACESYMBOL = 1 << 5; /* Sets SPACESYMBOL */
   const CTRLC       = 1 << 6; /* Allow Ctrl-C to be read as normal, disabling SIGINT */
   const EINTR       = 1 << 7; /* Return ERROR on signal (EINTR) rather than retry */
 }}
@@ -356,8 +360,8 @@ bitflags! { #[repr(C)] pub struct Format : ::libc::c_int
 
 /* Some useful combinations */
   const VIM         = (Format::ALTISMETA.bits|Format::WRAPBRACKET.bits);
-  const URWID       = (Format::LONGMOD.bits|Format::ALTISMETA.bits|Format::LOWERMOD.bits|
-      Format::SPACEMOD.bits|Format::LOWERSPACE.bits);
+  const URWID       = (Format::LONGMOD.bits|Format::ALTISMETA.bits|
+          Format::LOWERMOD.bits|Format::SPACEMOD.bits|Format::LOWERSPACE.bits);
 }}
 
 // Better to handle in makefile
