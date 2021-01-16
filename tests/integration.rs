@@ -111,7 +111,7 @@ fn test_01base() {
     tap.plan_tests(6);
 
     {
-        let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+        let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
         tap.ok(true, "termkey_new_abstract");
 
@@ -144,12 +144,12 @@ fn test_02getkey() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(31);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tap.is_int(tk.get_buffer_remaining(), 256, "buffer free initially 256");
 
     match tk.getkey() {
-        termkey::TermKeyResult::None_ => {
+        termkey::Result::None_ => {
             tap.pass("getkey yields RES_NONE when empty");
         }
         _ => tap.fail("getkey yields RES_NONE when empty"),
@@ -164,11 +164,11 @@ fn test_02getkey() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after h");
 
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods,
                     utf8,
@@ -191,7 +191,7 @@ fn test_02getkey() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::None_ => {
+        termkey::Result::None_ => {
             tap.pass("getkey yields RES_NONE a second time");
         }
         _ => tap.fail("getkey yields RES_NONE a second time"),
@@ -200,21 +200,18 @@ fn test_02getkey() {
     tk.push_bytes("\x01".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after C-a");
 
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods,
                     utf8: _,
                 } => {
                     tap.pass("key.type after C-a");
                     tap.is_int(codepoint, 'a', "key.code.number after C-a");
-                    tap.ok(
-                        mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
-                        "key.modifiers after C-a",
-                    );
+                    tap.ok(mods == termkey::c::KeyMod::CTRL, "key.modifiers after C-a");
                 }
                 _ => tap.bypass(3, "key.type after C-a"),
             }
@@ -224,17 +221,13 @@ fn test_02getkey() {
     tk.push_bytes("\x1bOA".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after Up");
 
             match key {
-                termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+                termkey::Event::KeySym { sym, mods } => {
                     tap.pass("key.type after Up");
-                    tap.is_int(
-                        sym,
-                        termkey::c::TermKeySym::TERMKEY_SYM_UP,
-                        "key.code.sym after Up",
-                    );
+                    tap.is_int(sym, termkey::c::Sym::UP, "key.code.sym after Up");
                     tap.ok(mods.is_empty(), "key.modifiers after Up");
                 }
                 _ => tap.bypass(3, "key.type after Up"),
@@ -252,22 +245,22 @@ fn test_02getkey() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::Again => tap.pass("getkey yields RES_AGAIN after partial write"),
+        termkey::Result::Again => tap.pass("getkey yields RES_AGAIN after partial write"),
         _ => tap.fail("getkey yields RES_AGAIN after partial write"),
     }
 
     tk.push_bytes("C".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after Right completion");
 
             match key {
-                termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+                termkey::Event::KeySym { sym, mods } => {
                     tap.pass("key.type after Right completion");
                     tap.is_int(
                         sym,
-                        termkey::c::TermKeySym::TERMKEY_SYM_RIGHT,
+                        termkey::c::Sym::RIGHT,
                         "key.code.sym after Right completion",
                     );
                     tap.ok(mods.is_empty(), "key.modifiers after Right completion");
@@ -287,19 +280,19 @@ fn test_02getkey() {
     tk.push_bytes("\x1b[27;5u".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after Ctrl-Escape");
 
             match key {
-                termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+                termkey::Event::KeySym { sym, mods } => {
                     tap.pass("key.type after Ctrl-Escape");
                     tap.is_int(
                         sym,
-                        termkey::c::TermKeySym::TERMKEY_SYM_ESCAPE,
+                        termkey::c::Sym::ESCAPE,
                         "key.code.sym after Ctrl-Escape",
                     );
                     tap.ok(
-                        mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+                        mods == termkey::c::KeyMod::CTRL,
                         "key.modifiers after Ctrl-Escape",
                     );
                 }
@@ -315,15 +308,14 @@ fn test_03utf8() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(57);
 
-    let mut tk =
-        termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::TERMKEY_FLAG_UTF8);
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::UTF8);
 
     tk.push_bytes("a".as_bytes());
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY low ASCII");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -342,10 +334,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xC2, 0xA0]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 low");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -361,10 +353,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xDF, 0xBF]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 high");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -382,10 +374,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xE0, 0xA0, 0x80]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 low");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -401,10 +393,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xEF, 0xBF, 0xBD]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 high");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -422,10 +414,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF0, 0x90, 0x80, 0x80]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 low");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -441,10 +433,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF4, 0x8F, 0xBF, 0xBF]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 high");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -462,10 +454,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xC2, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 invalid cont");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -482,10 +474,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 2 invalid cont"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -500,10 +492,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xE0, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid cont");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -520,10 +512,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 3 invalid cont"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -538,10 +530,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xE0, 0xA0, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid cont 2");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -558,10 +550,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 3 invalid cont 2"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -576,10 +568,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF0, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -596,10 +588,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 4 invalid cont"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -614,10 +606,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF0, 0x90, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont 2");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -634,10 +626,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 4 invalid cont 2"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -652,10 +644,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF0, 0x90, 0x80, '!' as u8]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid cont 3");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -672,10 +664,10 @@ fn test_03utf8() {
         _ => tap.bypass(2, "getkey yields RES_KEY UTF-8 4 invalid cont 3"),
     }
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 invalid after");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -692,7 +684,7 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xC2]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 2 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 2 partial"),
@@ -700,10 +692,10 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xA0]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 2 partial");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -718,24 +710,24 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xE0]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 3 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 3 partial"),
     }
     tk.push_bytes(&[0xA0]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 3 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 3 partial"),
     }
     tk.push_bytes(&[0x80]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 3 partial");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -750,31 +742,31 @@ fn test_03utf8() {
 
     tk.push_bytes(&[0xF0]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 4 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 4 partial"),
     }
     tk.push_bytes(&[0x90]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 4 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 4 partial"),
     }
     tk.push_bytes(&[0x80]);
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN UTF-8 4 partial");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN UTF-8 4 partial"),
     }
     tk.push_bytes(&[0x80]);
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY UTF-8 4 partial");
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods: _,
                     utf8: _,
@@ -793,15 +785,15 @@ fn test_04flags() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(8);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tk.push_bytes(" ".as_bytes());
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after space");
 
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods,
                     utf8: _,
@@ -816,19 +808,19 @@ fn test_04flags() {
         _ => tap.bypass(4, "getkey yields RES_KEY after space"),
     }
 
-    tk.set_flags(termkey::c::X_TermKey_Flag::TERMKEY_FLAG_SPACESYMBOL);
+    tk.set_flags(termkey::c::Flag::SPACESYMBOL);
 
     tk.push_bytes(" ".as_bytes());
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after space");
 
             match key {
-                termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+                termkey::Event::KeySym { sym, mods } => {
                     tap.pass("key.type after space with FLAG_SPACESYMBOL");
                     tap.is_int(
                         sym,
-                        termkey::c::TermKeySym::TERMKEY_SYM_SPACE,
+                        termkey::c::Sym::SPACE,
                         "key.code.number after space with FLAG_SPACESYMBOL",
                     );
                     tap.ok(
@@ -870,15 +862,12 @@ fn test_05read() {
     /* Sanitise this just in case */
     std::env::set_var("TERM", "vt100");
 
-    let mut tk = termkey::TermKey::new(
-        reader_fd,
-        termkey::c::X_TermKey_Flag::TERMKEY_FLAG_NOTERMIOS,
-    );
+    let mut tk = termkey::TermKey::new(reader_fd, termkey::c::Flag::NOTERMIOS);
 
     tap.is_int(tk.get_buffer_remaining(), 256, "buffer free initially 256");
 
     match tk.getkey() {
-        termkey::TermKeyResult::None_ => {
+        termkey::Result::None_ => {
             tap.pass("getkey yields RES_NONE when empty");
         }
         _ => tap.bypass(1, "getkey yields RES_NONE when empty"),
@@ -887,14 +876,14 @@ fn test_05read() {
     fd_write(writer_fd, "h");
 
     match tk.getkey() {
-        termkey::TermKeyResult::None_ => {
+        termkey::Result::None_ => {
             tap.pass("getkey yields RES_NONE before advisereadable");
         }
         _ => tap.bypass(1, "getkey yields RES_NONE before advisereadable"),
     }
 
     match tk.advisereadable() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("advisereadable yields RES_AGAIN after h");
         }
         _ => tap.bypass(1, "advisereadable yields RES_AGAIN after h"),
@@ -907,11 +896,11 @@ fn test_05read() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after h");
 
             match key {
-                termkey::TermKeyEvent::UnicodeEvent {
+                termkey::Event::Unicode {
                     codepoint,
                     mods,
                     utf8,
@@ -934,7 +923,7 @@ fn test_05read() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::None_ => {
+        termkey::Result::None_ => {
             tap.pass("getkey yields RES_NONE a second time");
         }
         _ => tap.bypass(1, "getkey yields RES_NONE a second time"),
@@ -950,7 +939,7 @@ fn test_05read() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::Again => {
+        termkey::Result::Again => {
             tap.pass("getkey yields RES_AGAIN after partial write");
         }
         _ => tap.bypass(1, "getkey yields RES_AGAIN after partial write"),
@@ -960,17 +949,13 @@ fn test_05read() {
     tk.advisereadable();
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY after Right completion");
 
             match key {
-                termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+                termkey::Event::KeySym { sym, mods } => {
                     tap.pass("key.type after Right");
-                    tap.is_int(
-                        sym,
-                        termkey::c::TermKeySym::TERMKEY_SYM_RIGHT,
-                        "key.code.sym after Right",
-                    );
+                    tap.is_int(sym, termkey::c::Sym::RIGHT, "key.code.sym after Right");
                     tap.ok(mods.is_empty(), "key.modifiers after Right");
                 }
                 _ => tap.bypass(3, "key.type after Right"),
@@ -988,7 +973,7 @@ fn test_05read() {
     tk.stop();
 
     match tk.getkey() {
-        termkey::TermKeyResult::Error { err } => {
+        termkey::Result::Error { err } => {
             tap.pass("getkey yields RES_ERROR after termkey_stop()");
             tap.ok(
                 err.kind() == ::std::io::ErrorKind::InvalidInput,
@@ -1009,7 +994,7 @@ fn test_06buffer() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(9);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tap.is_int(tk.get_buffer_remaining(), 256, "buffer free initially 256");
     tap.is_int(tk.get_buffer_size(), 256, "buffer size initially 256");
@@ -1041,7 +1026,7 @@ fn test_06buffer() {
     );
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(_) => {
+        termkey::Result::Key(_) => {
             tap.pass("buffered key still useable after resize");
         }
         _ => tap.bypass(1, "buffered key still useable after resize"),
@@ -1057,22 +1042,14 @@ fn test_10keyname() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(10);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     let mut sym;
     sym = tk.keyname2sym("Space");
-    tap.is_int(
-        sym,
-        termkey::c::TermKeySym::TERMKEY_SYM_SPACE,
-        "keyname2sym Space",
-    );
+    tap.is_int(sym, termkey::c::Sym::SPACE, "keyname2sym Space");
 
     sym = tk.keyname2sym("SomeUnknownKey");
-    tap.is_int(
-        sym,
-        termkey::c::TermKeySym::TERMKEY_SYM_UNKNOWN,
-        "keyname2sym SomeUnknownKey",
-    );
+    tap.is_int(sym, termkey::c::Sym::UNKNOWN, "keyname2sym SomeUnknownKey");
 
     match tk.lookup_keyname("Up", &mut sym) {
         Some(end) => {
@@ -1084,7 +1061,7 @@ fn test_10keyname() {
             );
             tap.is_int(
                 sym,
-                termkey::c::TermKeySym::TERMKEY_SYM_UP,
+                termkey::c::Sym::UP,
                 "termkey_get_keyname Up yields Up symbol",
             );
         }
@@ -1101,7 +1078,7 @@ fn test_10keyname() {
             );
             tap.is_int(
                 sym,
-                termkey::c::TermKeySym::TERMKEY_SYM_DOWN,
+                termkey::c::Sym::DOWN,
                 "termkey_get_keyname DownMore yields Down symbol",
             );
         }
@@ -1115,7 +1092,7 @@ fn test_10keyname() {
         Some(_) => tap.bypass(1, "termkey_get_keyname SomeUnknownKey returns NULL"),
     }
 
-    //tap.is_str(tk.get_keyname(termkey::c::TermKeySym::TERMKEY_SYM_SPACE), "Space", "get_keyname SPACE");
+    //tap.is_str(tk.get_keyname(termkey::c::Sym::SPACE), "Space", "get_keyname SPACE");
     tap.is_str("Space", "Space", "get_keyname SPACE");
 }
 
@@ -1124,44 +1101,43 @@ fn test_11strfkey() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(44);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::UnicodeEvent {
+    let key: termkey::Event = termkey::Event::Unicode {
         codepoint: 'A',
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+        mods: termkey::c::KeyMod::empty(),
         utf8: termkey::Utf8Char {
             bytes: [0, 0, 0, 0, 0, 0, 0],
         },
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 1, "length for unicode/A/0");
     tap.is_str(buffer, "A", "buffer for unicode/A/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::Format::WRAPBRACKET);
     tap.is_int(buffer.len(), 1, "length for unicode/A/0 wrapbracket");
     tap.is_str(buffer, "A", "buffer for unicode/A/0 wrapbracket");
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::UnicodeEvent {
+    let key: termkey::Event = termkey::Event::Unicode {
         codepoint: 'b',
-        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::KeyMod::CTRL,
         utf8: termkey::Utf8Char {
             bytes: [0, 0, 0, 0, 0, 0, 0],
         },
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 3, "length for unicode/b/CTRL");
     tap.is_str(buffer, "C-b", "buffer for unicode/b/CTRL");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD);
+    let buffer = tk.strfkey(key, termkey::c::Format::LONGMOD);
     tap.is_int(buffer.len(), 6, "length for unicode/b/CTRL longmod");
     tap.is_str(buffer, "Ctrl-b", "buffer for unicode/b/CTRL longmod");
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD,
+        termkey::c::Format::LONGMOD | termkey::c::Format::SPACEMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1176,8 +1152,7 @@ fn test_11strfkey() {
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
+        termkey::c::Format::LONGMOD | termkey::c::Format::LOWERMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1192,9 +1167,7 @@ fn test_11strfkey() {
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
-            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
+        termkey::c::Format::LONGMOD | termkey::c::Format::SPACEMOD | termkey::c::Format::LOWERMOD,
     );
     tap.is_int(
         buffer.len(),
@@ -1207,38 +1180,37 @@ fn test_11strfkey() {
         "buffer for unicode/b/CTRL longmod|spacemod|lowermode",
     );
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_CARETCTRL);
+    let buffer = tk.strfkey(key, termkey::c::Format::CARETCTRL);
     tap.is_int(buffer.len(), 2, "length for unicode/b/CTRL caretctrl");
     tap.is_str(buffer, "^B", "buffer for unicode/b/CTRL caretctrl");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::Format::WRAPBRACKET);
     tap.is_int(buffer.len(), 5, "length for unicode/b/CTRL wrapbracket");
     tap.is_str(buffer, "<C-b>", "buffer for unicode/b/CTRL wrapbracket");
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::UnicodeEvent {
+    let key: termkey::Event = termkey::Event::Unicode {
         codepoint: 'c',
-        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+        mods: termkey::c::KeyMod::ALT,
         utf8: termkey::Utf8Char {
             bytes: [0, 0, 0, 0, 0, 0, 0],
         },
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 3, "length for unicode/c/ALT");
     tap.is_str(buffer, "A-c", "buffer for unicode/c/ALT");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD);
+    let buffer = tk.strfkey(key, termkey::c::Format::LONGMOD);
     tap.is_int(buffer.len(), 5, "length for unicode/c/ALT longmod");
     tap.is_str(buffer, "Alt-c", "buffer for unicode/c/ALT longmod");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA);
+    let buffer = tk.strfkey(key, termkey::c::Format::ALTISMETA);
     tap.is_int(buffer.len(), 3, "length for unicode/c/ALT altismeta");
     tap.is_str(buffer, "M-c", "buffer for unicode/c/ALT altismeta");
 
     let buffer = tk.strfkey(
         key,
-        termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-            | termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA,
+        termkey::c::Format::LONGMOD | termkey::c::Format::ALTISMETA,
     );
     tap.is_int(
         buffer.len(),
@@ -1251,29 +1223,29 @@ fn test_11strfkey() {
         "buffer for unicode/c/ALT longmod|altismeta",
     );
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::KeySymEvent {
-        sym: termkey::c::TermKeySym::TERMKEY_SYM_UP,
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+    let key: termkey::Event = termkey::Event::KeySym {
+        sym: termkey::c::Sym::UP,
+        mods: termkey::c::KeyMod::empty(),
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 2, "length for sym/Up/0");
     tap.is_str(buffer, "Up", "buffer for sym/Up/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::Format::WRAPBRACKET);
     tap.is_int(buffer.len(), 4, "length for sym/Up/0 wrapbracket");
     tap.is_str(buffer, "<Up>", "buffer for sym/Up/0 wrapbracket");
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::KeySymEvent {
-        sym: termkey::c::TermKeySym::TERMKEY_SYM_PAGEUP,
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+    let key: termkey::Event = termkey::Event::KeySym {
+        sym: termkey::c::Sym::PAGEUP,
+        mods: termkey::c::KeyMod::empty(),
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 6, "length for sym/PageUp/0");
     tap.is_str(buffer, "PageUp", "buffer for sym/PageUp/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE);
+    let buffer = tk.strfkey(key, termkey::c::Format::LOWERSPACE);
     tap.is_int(buffer.len(), 7, "length for sym/PageUp/0 lowerspace");
     tap.is_str(buffer, "page up", "buffer for sym/PageUp/0 lowerspace");
 
@@ -1286,32 +1258,29 @@ fn test_11strfkey() {
         // strfkey internals are not exposed; this is done internally.
 
         /* If size of buffer is too small, strfkey should return something consistent */
-        let buffer = tk.strfkey(/*4*/ key, termkey::c::TermKeyFormat::empty());
+        let buffer = tk.strfkey(/*4*/ key, termkey::c::Format::empty());
         tap.is_int(buffer.len(), 6, "length for sym/PageUp/0");
         tap.is_str(buffer, "Pag", "buffer of len 4 for sym/PageUp/0");
 
-        let buffer = tk.strfkey(
-            /*4*/ key,
-            termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE,
-        );
+        let buffer = tk.strfkey(/*4*/ key, termkey::c::Format::LOWERSPACE);
         tap.is_int(buffer.len(), 7, "length for sym/PageUp/0 lowerspace");
         tap.is_str(buffer, "pag", "buffer of len 4 for sym/PageUp/0 lowerspace");
     }
 
-    let key: termkey::TermKeyEvent = termkey::TermKeyEvent::FunctionEvent {
+    let key: termkey::Event = termkey::Event::Function {
         num: 5,
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+        mods: termkey::c::KeyMod::empty(),
     };
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+    let buffer = tk.strfkey(key, termkey::c::Format::empty());
     tap.is_int(buffer.len(), 2, "length for func/5/0");
     tap.is_str(buffer, "F5", "buffer for func/5/0");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_WRAPBRACKET);
+    let buffer = tk.strfkey(key, termkey::c::Format::WRAPBRACKET);
     tap.is_int(buffer.len(), 4, "length for func/5/0 wrapbracket");
     tap.is_str(buffer, "<F5>", "buffer for func/5/0 wrapbracket");
 
-    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE);
+    let buffer = tk.strfkey(key, termkey::c::Format::LOWERSPACE);
     tap.is_int(buffer.len(), 2, "length for func/5/0 lowerspace");
     tap.is_str(buffer, "f5", "buffer for func/5/0 lowerspace");
 }
@@ -1321,12 +1290,12 @@ fn test_12strpkey() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(62);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     {
-        let (key, endp) = tk.strpkey("A", termkey::c::TermKeyFormat::empty()).unwrap();
+        let (key, endp) = tk.strpkey("A", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1342,10 +1311,10 @@ fn test_12strpkey() {
     }
     {
         let (key, endp) = tk
-            .strpkey("A and more", termkey::c::TermKeyFormat::empty())
+            .strpkey("A and more", termkey::c::Format::empty())
             .unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1368,11 +1337,9 @@ fn test_12strpkey() {
         );
     }
     {
-        let (key, endp) = tk
-            .strpkey("C-b", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("C-b", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1380,7 +1347,7 @@ fn test_12strpkey() {
                 tap.pass("key.type for unicode/b/CTRL");
                 tap.is_int(codepoint, 'b', "key.code.codepoint for unicode/b/CTRL");
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::KeyMod::CTRL,
                     "key.modifiers for unicode/b/CTRL",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL");
@@ -1390,11 +1357,9 @@ fn test_12strpkey() {
         tap.is_str(endp, "", "consumed entire input for unicode/b/CTRL");
     }
     {
-        let (key, endp) = tk
-            .strpkey("Ctrl-b", termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD)
-            .unwrap();
+        let (key, endp) = tk.strpkey("Ctrl-b", termkey::c::Format::LONGMOD).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1406,7 +1371,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/b/CTRL longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::KeyMod::CTRL,
                     "key.modifiers for unicode/b/CTRL longmod",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL longmod");
@@ -1416,11 +1381,9 @@ fn test_12strpkey() {
         tap.is_str(endp, "", "consumed entire input for unicode/b/CTRL longmod");
     }
     {
-        let (key, endp) = tk
-            .strpkey("^B", termkey::c::TermKeyFormat::TERMKEY_FORMAT_CARETCTRL)
-            .unwrap();
+        let (key, endp) = tk.strpkey("^B", termkey::c::Format::CARETCTRL).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1432,7 +1395,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/b/CTRL caretctrl",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::KeyMod::CTRL,
                     "key.modifiers for unicode/b/CTRL caretctrl",
                 );
                 tap.is_str(utf8.s(), "b", "key.utf8 for unicode/b/CTRL caretctrl");
@@ -1446,11 +1409,9 @@ fn test_12strpkey() {
         );
     }
     {
-        let (key, endp) = tk
-            .strpkey("A-c", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("A-c", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1458,7 +1419,7 @@ fn test_12strpkey() {
                 tap.pass("key.type for unicode/c/ALT");
                 tap.is_int(codepoint, 'c', "key.code.codepoint for unicode/c/ALT");
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::KeyMod::ALT,
                     "key.modifiers for unicode/c/ALT",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT");
@@ -1468,11 +1429,9 @@ fn test_12strpkey() {
         tap.is_str(endp, "", "consumed entire input for unicode/c/ALT");
     }
     {
-        let (key, endp) = tk
-            .strpkey("Alt-c", termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD)
-            .unwrap();
+        let (key, endp) = tk.strpkey("Alt-c", termkey::c::Format::LONGMOD).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1484,7 +1443,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::KeyMod::ALT,
                     "key.modifiers for unicode/c/ALT longmod",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT longmod");
@@ -1494,11 +1453,9 @@ fn test_12strpkey() {
         tap.is_str(endp, "", "consumed entire input for unicode/c/ALT longmod");
     }
     {
-        let (key, endp) = tk
-            .strpkey("M-c", termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA)
-            .unwrap();
+        let (key, endp) = tk.strpkey("M-c", termkey::c::Format::ALTISMETA).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1510,7 +1467,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::KeyMod::ALT,
                     "key.modifiers for unicode/c/ALT altismeta",
                 );
                 tap.is_str(utf8.s(), "c", "key.utf8 for unicode/c/ALT altismeta");
@@ -1527,12 +1484,11 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "Meta-c",
-                termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD,
+                termkey::c::Format::ALTISMETA | termkey::c::Format::LONGMOD,
             )
             .unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1544,7 +1500,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta+longmod",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::KeyMod::ALT,
                     "key.modifiers for unicode/c/ALT altismeta+longmod",
                 );
                 tap.is_str(
@@ -1565,14 +1521,14 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "meta c",
-                termkey::c::TermKeyFormat::TERMKEY_FORMAT_ALTISMETA
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD,
+                termkey::c::Format::ALTISMETA
+                    | termkey::c::Format::LONGMOD
+                    | termkey::c::Format::SPACEMOD
+                    | termkey::c::Format::LOWERMOD,
             )
             .unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1584,7 +1540,7 @@ fn test_12strpkey() {
                     "key.code.codepoint for unicode/c/ALT altismeta+long/space+lowermod",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT,
+                    mods == termkey::c::KeyMod::ALT,
                     "key.modifiers for unicode/c/ALT altismeta+long/space+lowermod",
                 );
                 tap.is_str(
@@ -1608,23 +1564,22 @@ fn test_12strpkey() {
         let (key, endp) = tk
             .strpkey(
                 "ctrl alt page up",
-                termkey::c::TermKeyFormat::TERMKEY_FORMAT_LONGMOD
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_SPACEMOD
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERMOD
-                    | termkey::c::TermKeyFormat::TERMKEY_FORMAT_LOWERSPACE,
+                termkey::c::Format::LONGMOD
+                    | termkey::c::Format::SPACEMOD
+                    | termkey::c::Format::LOWERMOD
+                    | termkey::c::Format::LOWERSPACE,
             )
             .unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for sym/PageUp/CTRL+ALT long/space/lowermod+lowerspace");
                 tap.is_int(
                     sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_PAGEUP,
+                    termkey::c::Sym::PAGEUP,
                     "key.code.codepoint for sym/PageUp/CTRL+ALT long/space/lowermod+lowerspace",
                 );
                 tap.ok(
-                    mods == termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_ALT
-                        | termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+                    mods == termkey::c::KeyMod::ALT | termkey::c::KeyMod::CTRL,
                     "key.modifiers for sym/PageUp/CTRL+ALT long/space/lowermod+lowerspace",
                 );
             }
@@ -1640,17 +1595,11 @@ fn test_12strpkey() {
         );
     }
     {
-        let (key, endp) = tk
-            .strpkey("Up", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("Up", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for sym/Up/0");
-                tap.is_int(
-                    sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_UP,
-                    "key.code.codepoint for sym/Up/0",
-                );
+                tap.is_int(sym, termkey::c::Sym::UP, "key.code.codepoint for sym/Up/0");
                 tap.ok(mods.is_empty(), "key.modifiers for sym/Up/0");
             }
             _ => tap.bypass(3, "key.type for sym/Up/0"),
@@ -1658,11 +1607,9 @@ fn test_12strpkey() {
         tap.is_str(endp, "", "consumed entire input for sym/Up/0");
     }
     {
-        let (key, endp) = tk
-            .strpkey("F5", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("F5", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::FunctionEvent { num, mods } => {
+            termkey::Event::Function { num, mods } => {
                 tap.pass("key.type for func/5/0");
                 tap.is_int(num, 5, "key.code.number for func/5/0");
                 tap.ok(mods.is_empty(), "key.modifiers for func/5/0");
@@ -1678,57 +1625,57 @@ fn test_13cmpkey() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(12);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
-    let mut key1: termkey::TermKeyEvent;
-    let mut key2: termkey::TermKeyEvent;
+    let mut key1: termkey::Event;
+    let mut key2: termkey::Event;
 
-    key1 = termkey::TermKeyEvent::UnicodeEvent {
+    key1 = termkey::Event::Unicode {
         codepoint: 'A',
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+        mods: termkey::c::KeyMod::empty(),
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
     tap.ok(key1 == key1, "cmpkey same structure");
 
-    key2 = termkey::TermKeyEvent::UnicodeEvent {
+    key2 = termkey::Event::Unicode {
         codepoint: 'A',
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+        mods: termkey::c::KeyMod::empty(),
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
     tap.ok(key1 == key2, "cmpkey identical structure");
 
-    key2 = termkey::TermKeyEvent::UnicodeEvent {
+    key2 = termkey::Event::Unicode {
         codepoint: 'A',
-        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::KeyMod::CTRL,
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
     tap.ok(key1 < key2, "cmpkey orders CTRL after nomod");
     tap.ok(key2 > key1, "cmpkey orders nomod before CTRL");
 
-    key2 = termkey::TermKeyEvent::UnicodeEvent {
+    key2 = termkey::Event::Unicode {
         codepoint: 'B',
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+        mods: termkey::c::KeyMod::empty(),
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
     tap.ok(key1 < key2, "cmpkey orders 'B' after 'A'");
     tap.ok(key2 > key1, "cmpkey orders 'A' before 'B'");
 
-    key1 = termkey::TermKeyEvent::UnicodeEvent {
+    key1 = termkey::Event::Unicode {
         codepoint: 'A',
-        mods: termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
+        mods: termkey::c::KeyMod::CTRL,
         utf8: termkey::Utf8Char { bytes: [0; 7] },
     };
 
     tap.ok(key1 < key2, "cmpkey orders nomod 'B' after CTRL 'A'");
     tap.ok(key2 > key1, "cmpkey orders CTRL 'A' before nomod 'B'");
 
-    key2 = termkey::TermKeyEvent::KeySymEvent {
-        sym: termkey::c::TermKeySym::TERMKEY_SYM_UP,
-        mods: termkey::c::X_TermKey_KeyMod::empty(),
+    key2 = termkey::Event::KeySym {
+        sym: termkey::c::Sym::UP,
+        mods: termkey::c::KeyMod::empty(),
     };
 
     tap.ok(key1 < key2, "cmpkey orders KEYSYM after UNICODE");
@@ -1738,13 +1685,13 @@ fn test_13cmpkey() {
         tap.pass("skipping unsupported space test 1");
         tap.pass("skipping unsupported space test 2");
     } else {
-        key1 = termkey::TermKeyEvent::KeySymEvent {
-            sym: termkey::c::TermKeySym::TERMKEY_SYM_SPACE,
-            mods: termkey::c::X_TermKey_KeyMod::empty(),
+        key1 = termkey::Event::KeySym {
+            sym: termkey::c::Sym::SPACE,
+            mods: termkey::c::KeyMod::empty(),
         };
-        key2 = termkey::TermKeyEvent::UnicodeEvent {
+        key2 = termkey::Event::Unicode {
             codepoint: ' ',
-            mods: termkey::c::X_TermKey_KeyMod::empty(),
+            mods: termkey::c::KeyMod::empty(),
             utf8: termkey::Utf8Char { bytes: [0; 7] },
         };
 
@@ -1756,7 +1703,7 @@ fn test_13cmpkey() {
         // Rust is being too smart for its own good, and forbids multiple
         // borrows in one line, even though only one borrow happens at a time.
         let cflags = tk.get_canonflags();
-        tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_SPACESYMBOL);
+        tk.set_canonflags(cflags | termkey::c::Canon::SPACESYMBOL);
         tap.ok(
             key1 == key2,
             "cmpkey considers KEYSYM/SPACE and UNICODE/SP identical under SPACESYMBOL",
@@ -1769,12 +1716,12 @@ fn test_20canon() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(26);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     {
-        let (key, endp) = tk.strpkey(" ", termkey::c::TermKeyFormat::empty()).unwrap();
+        let (key, endp) = tk.strpkey(" ", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1789,11 +1736,9 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for SP/unicode");
     }
     {
-        let (key, endp) = tk
-            .strpkey("Space", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("Space", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::UnicodeEvent {
+            termkey::Event::Unicode {
                 codepoint,
                 mods,
                 utf8,
@@ -1808,15 +1753,15 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for Space/unicode");
     }
     let cflags = tk.get_canonflags();
-    tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_SPACESYMBOL);
+    tk.set_canonflags(cflags | termkey::c::Canon::SPACESYMBOL);
     {
-        let (key, endp) = tk.strpkey(" ", termkey::c::TermKeyFormat::empty()).unwrap();
+        let (key, endp) = tk.strpkey(" ", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for SP/symbol");
                 tap.is_int(
                     sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_SPACE,
+                    termkey::c::Sym::SPACE,
                     "key.code.codepoint for SP/symbol",
                 );
                 tap.ok(mods.is_empty(), "key.modifiers for SP/symbol");
@@ -1826,15 +1771,13 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for SP/symbol");
     }
     {
-        let (key, endp) = tk
-            .strpkey("Space", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("Space", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for Space/symbol");
                 tap.is_int(
                     sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_SPACE,
+                    termkey::c::Sym::SPACE,
                     "key.code.codepoint for Space/symbol",
                 );
                 tap.ok(mods.is_empty(), "key.modifiers for Space/symbol");
@@ -1844,15 +1787,13 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for Space/symbol");
     }
     {
-        let (key, endp) = tk
-            .strpkey("DEL", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("DEL", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for Del/unconverted");
                 tap.is_int(
                     sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_DEL,
+                    termkey::c::Sym::DEL,
                     "key.code.codepoint for Del/unconverted",
                 );
                 tap.ok(mods.is_empty(), "key.modifiers for Del/unconverted");
@@ -1862,17 +1803,15 @@ fn test_20canon() {
         tap.is_str(endp, "", "consumed entire input for Del/unconverted");
     }
     let cflags = tk.get_canonflags();
-    tk.set_canonflags(cflags | termkey::c::X_TermKey_Canon::TERMKEY_CANON_DELBS);
+    tk.set_canonflags(cflags | termkey::c::Canon::DELBS);
     {
-        let (key, endp) = tk
-            .strpkey("DEL", termkey::c::TermKeyFormat::empty())
-            .unwrap();
+        let (key, endp) = tk.strpkey("DEL", termkey::c::Format::empty()).unwrap();
         match key {
-            termkey::TermKeyEvent::KeySymEvent { sym, mods } => {
+            termkey::Event::KeySym { sym, mods } => {
                 tap.pass("key.type for Del/as-backspace");
                 tap.is_int(
                     sym,
-                    termkey::c::TermKeySym::TERMKEY_SYM_BACKSPACE,
+                    termkey::c::Sym::BACKSPACE,
                     "key.code.codepoint for Del/as-backspace",
                 );
                 tap.ok(mods.is_empty(), "key.modifiers for Del/as-backspace");
@@ -1888,17 +1827,17 @@ fn test_30mouse() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(60);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     {
         tk.push_bytes("\x1b[M !!".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Key(key) => {
                 tap.pass("getkey yields RES_KEY for mouse press");
 
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         ev,
                         button,
                         line,
@@ -1909,22 +1848,17 @@ fn test_30mouse() {
 
                         tap.pass("interpret_mouse yields RES_KEY");
 
-                        tap.is_int(
-                            ev,
-                            termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_PRESS,
-                            "mouse event for press",
-                        );
+                        tap.is_int(ev, termkey::c::MouseEvent::PRESS, "mouse event for press");
                         tap.is_int(button, 1, "mouse button for press");
                         tap.is_int(line, 1, "mouse line for press");
                         tap.is_int(col, 1, "mouse column for press");
                         tap.ok(mods.is_empty(), "modifiers for press");
 
-                        let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+                        let buffer = tk.strfkey(key, termkey::c::Format::empty());
                         tap.is_int(buffer.len(), 13, "string length for press");
                         tap.is_str(buffer, "MousePress(1)", "string buffer for press");
 
-                        let buffer =
-                            tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_MOUSE_POS);
+                        let buffer = tk.strfkey(key, termkey::c::Format::MOUSE_POS);
                         tap.is_int(buffer.len(), 21, "string length for press");
                         tap.is_str(buffer, "MousePress(1) @ (1,1)", "string buffer for press");
                     }
@@ -1939,8 +1873,8 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[M@\"!".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => match key {
-                termkey::TermKeyEvent::MouseEvent {
+            termkey::Result::Key(key) => match key {
+                termkey::Event::Mouse {
                     ev,
                     button,
                     line,
@@ -1949,11 +1883,7 @@ fn test_30mouse() {
                 } => {
                     tap.pass("interpret_mouse yields RES_KEY");
 
-                    tap.is_int(
-                        ev,
-                        termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_DRAG,
-                        "mouse event for drag",
-                    );
+                    tap.is_int(ev, termkey::c::MouseEvent::DRAG, "mouse event for drag");
                     tap.is_int(button, 1, "mouse button for drag");
                     tap.is_int(line, 1, "mouse line for drag");
                     tap.is_int(col, 2, "mouse column for drag");
@@ -1967,8 +1897,8 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[M##!".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => match key {
-                termkey::TermKeyEvent::MouseEvent {
+            termkey::Result::Key(key) => match key {
+                termkey::Event::Mouse {
                     ev,
                     button: _,
                     line,
@@ -1979,7 +1909,7 @@ fn test_30mouse() {
 
                     tap.is_int(
                         ev,
-                        termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_RELEASE,
+                        termkey::c::MouseEvent::RELEASE,
                         "mouse event for release",
                     );
                     tap.is_int(line, 1, "mouse line for release");
@@ -1996,8 +1926,8 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[M0++".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => match key {
-                termkey::TermKeyEvent::MouseEvent {
+            termkey::Result::Key(key) => match key {
+                termkey::Event::Mouse {
                     ev,
                     button,
                     line,
@@ -2008,19 +1938,15 @@ fn test_30mouse() {
 
                     tap.is_int(
                         ev,
-                        termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_PRESS,
+                        termkey::c::MouseEvent::PRESS,
                         "mouse event for Ctrl-press",
                     );
                     tap.is_int(button, 1, "mouse button for Ctrl-press");
                     tap.is_int(line, 11, "mouse line for Ctrl-press");
                     tap.is_int(col, 11, "mouse column for Ctrl-press");
-                    tap.is_int(
-                        mods,
-                        termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL,
-                        "modifiers for Ctrl-press",
-                    );
+                    tap.is_int(mods, termkey::c::KeyMod::CTRL, "modifiers for Ctrl-press");
 
-                    let buffer = tk.strfkey(key, termkey::c::TermKeyFormat::empty());
+                    let buffer = tk.strfkey(key, termkey::c::Format::empty());
                     tap.is_int(buffer.len(), 15, "string length for Ctrl-press");
                     tap.is_str(buffer, "C-MousePress(1)", "string buffer for Ctrl-press");
                 }
@@ -2035,10 +1961,10 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[0;20;20M".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Key(key) => {
                 tap.pass("getkey yields RES_KEY for mouse press rxvt protocol");
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         ev,
                         button,
                         line,
@@ -2051,7 +1977,7 @@ fn test_30mouse() {
 
                         tap.is_int(
                             ev,
-                            termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_PRESS,
+                            termkey::c::MouseEvent::PRESS,
                             "mouse event for press rxvt protocol",
                         );
                         tap.is_int(button, 1, "mouse button for press rxvt protocol");
@@ -2070,10 +1996,10 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[3;20;20M".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Key(key) => {
                 tap.pass("getkey yields RES_KEY for mouse release rxvt protocol");
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         ev,
                         button: _,
                         line,
@@ -2086,7 +2012,7 @@ fn test_30mouse() {
 
                         tap.is_int(
                             ev,
-                            termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_RELEASE,
+                            termkey::c::MouseEvent::RELEASE,
                             "mouse event for release rxvt protocol",
                         );
                         tap.is_int(line, 20, "mouse line for release rxvt protocol");
@@ -2105,10 +2031,10 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[<0;30;30M".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Key(key) => {
                 tap.pass("getkey yields RES_KEY for mouse press SGR encoding");
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         ev,
                         button,
                         line,
@@ -2121,7 +2047,7 @@ fn test_30mouse() {
 
                         tap.is_int(
                             ev,
-                            termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_PRESS,
+                            termkey::c::MouseEvent::PRESS,
                             "mouse event for press SGR",
                         );
                         tap.is_int(button, 1, "mouse button for press SGR");
@@ -2140,10 +2066,10 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[<0;30;30m".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Key(key) => {
                 tap.pass("getkey yields RES_KEY for mouse release SGR encoding");
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         ev,
                         button: _,
                         line: _,
@@ -2156,7 +2082,7 @@ fn test_30mouse() {
 
                         tap.is_int(
                             ev,
-                            termkey::c::TermKeyMouseEvent::TERMKEY_MOUSE_RELEASE,
+                            termkey::c::MouseEvent::RELEASE,
                             "mouse event for release SGR",
                         );
                     }
@@ -2171,8 +2097,8 @@ fn test_30mouse() {
         tk.push_bytes("\x1b[<0;500;300M".as_bytes());
 
         match tk.getkey() {
-            termkey::TermKeyResult::Key(key) => match key {
-                termkey::TermKeyEvent::MouseEvent {
+            termkey::Result::Key(key) => match key {
+                termkey::Event::Mouse {
                     ev: _,
                     button: _,
                     line,
@@ -2194,15 +2120,15 @@ fn test_31position() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(8);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tk.push_bytes("\x1b[?15;7R".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for position report");
             match key {
-                termkey::TermKeyEvent::PositionEvent { line, col } => {
+                termkey::Event::Position { line, col } => {
                     tap.pass("key.type for position report");
 
                     tap.pass("interpret_position yields RES_KEY");
@@ -2222,11 +2148,11 @@ fn test_31position() {
     tk.push_bytes("\x1b[R".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for <F3>");
 
             match key {
-                termkey::TermKeyEvent::FunctionEvent { mods: _, num } => {
+                termkey::Event::Function { mods: _, num } => {
                     tap.pass("key.type for <F3>");
                     tap.is_int(num, 3, "key.code.number for <F3>");
                 }
@@ -2242,15 +2168,15 @@ fn test_32modereport() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(12);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tk.push_bytes("\x1b[?1;2$y".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for mode report");
             match key {
-                termkey::TermKeyEvent::ModeReportEvent {
+                termkey::Event::ModeReport {
                     initial,
                     mode,
                     value,
@@ -2272,11 +2198,11 @@ fn test_32modereport() {
     tk.push_bytes("\x1b[4;1$y".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for mode report");
 
             match key {
-                termkey::TermKeyEvent::ModeReportEvent {
+                termkey::Event::ModeReport {
                     initial,
                     mode,
                     value,
@@ -2301,19 +2227,19 @@ fn test_39csi() {
     let mut tap = taplib::Tap::new();
     tap.plan_tests(15);
 
-    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::X_TermKey_Flag::empty());
+    let mut tk = termkey::TermKey::new_abstract("vt100", termkey::c::Flag::empty());
 
     tk.push_bytes("\x1b[5;25v".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for CSI v");
 
             match key {
-                termkey::TermKeyEvent::UnknownCsiEvent => {
+                termkey::Event::UnknownCsi => {
                     tap.pass("key.type for unknown CSI");
 
-                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(key, &mut args, &mut command), TERMKEY_RES_KEY, "interpret_csi yields RES_KEY");
+                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(key, &mut args, &mut command), KEY, "interpret_csi yields RES_KEY");
 
                     tap.pass("skipping nargs == 2"); //is_int(nargs, 2, "nargs for unknown CSI");
                     tap.pass("skipping args[0] == 5"); //is_int(args[0], 5, "args[0] for unknown CSI");
@@ -2329,12 +2255,12 @@ fn test_39csi() {
     tk.push_bytes("\x1b[?w".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for CSI ? w");
             match key {
-                termkey::TermKeyEvent::UnknownCsiEvent => {
+                termkey::Event::UnknownCsi => {
                     tap.pass("key.type for unknown CSI");
-                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(&key, args, &nargs, &command), TERMKEY_RES_KEY, "interpret_csi yields RES_KEY");
+                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(&key, args, &nargs, &command), KEY, "interpret_csi yields RES_KEY");
                     tap.pass("skipping cmd == '?' cat 'w'") //is_int(command, '?'<<8 | 'w', "command for unknown CSI");
                 }
                 _ => tap.bypass(3, "key.type for unknown CSI"),
@@ -2346,12 +2272,12 @@ fn test_39csi() {
     tk.push_bytes("\x1b[?$x".as_bytes());
 
     match tk.getkey() {
-        termkey::TermKeyResult::Key(key) => {
+        termkey::Result::Key(key) => {
             tap.pass("getkey yields RES_KEY for CSI ? $x");
             match key {
-                termkey::TermKeyEvent::UnknownCsiEvent => {
+                termkey::Event::UnknownCsi => {
                     tap.pass("key.type for unknown CSI");
-                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(&key, args, &nargs, &command), TERMKEY_RES_KEY, "interpret_csi yields RES_KEY");
+                    tap.pass("skipping interpret_csi"); //is_int(tk.interpret_csi(&key, args, &nargs, &command), KEY, "interpret_csi yields RES_KEY");
                     tap.pass("skipping cmd == '$' cat '?' cat 'x'"); //is_int(command, '$'<<16 | '?'<<8 | 'x', "command for unknown CSI");
                 }
                 _ => tap.bypass(3, "key.type for unknown CSI"),

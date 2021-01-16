@@ -47,13 +47,13 @@ pub fn poll_rd1(fd: isize, waittime: isize) -> isize {
     unsafe { poll_::poll(&mut pfd, 1, waittime as c_int) as isize }
 }
 
-fn on_key(tk: &mut termkey::TermKey, key: termkey::TermKeyEvent) {
-    let s = tk.strfkey(key, termkey::c::TermKeyFormat::TERMKEY_FORMAT_VIM);
+fn on_key(tk: &mut termkey::TermKey, key: termkey::Event) {
+    let s = tk.strfkey(key, termkey::c::Format::VIM);
     println!("{}", s);
 }
 
 fn main() {
-    let mut tk = termkey::TermKey::new(0, termkey::c::X_TermKey_Flag::TERMKEY_FLAG_CTRLC);
+    let mut tk = termkey::TermKey::new(0, termkey::c::Flag::CTRLC);
     let mut running: bool = true;
     let mut nextwait = -1;
 
@@ -61,7 +61,7 @@ fn main() {
         let p = poll_rd1(0, nextwait);
         if p == 0 {
             match tk.getkey_force() {
-                termkey::TermKeyResult::Key(key) => on_key(&mut tk, key),
+                termkey::Result::Key(key) => on_key(&mut tk, key),
                 _ => {}
             }
         }
@@ -70,16 +70,15 @@ fn main() {
         }
         loop {
             match tk.getkey() {
-                termkey::TermKeyResult::Key(key) => {
+                termkey::Result::Key(key) => {
                     on_key(&mut tk, key);
                     match key {
-                        termkey::TermKeyEvent::UnicodeEvent {
+                        termkey::Event::Unicode {
                             mods,
                             codepoint,
                             utf8: _,
                         } => {
-                            if !(mods & termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL)
-                                .is_empty()
+                            if !(mods & termkey::c::KeyMod::CTRL).is_empty()
                                 && (codepoint == 'C' || codepoint == 'c')
                             {
                                 running = false;
@@ -88,7 +87,7 @@ fn main() {
                         _ => {}
                     }
                 }
-                termkey::TermKeyResult::Again => {
+                termkey::Result::Again => {
                     nextwait = tk.get_waittime();
                     break;
                 }

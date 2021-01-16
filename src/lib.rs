@@ -9,9 +9,9 @@ pub struct TermKey {
 }
 
 impl TermKey {
-    pub fn new(fd: c::c_int, flags: c::X_TermKey_Flag) -> TermKey {
+    pub fn new(fd: c::c_int, flags: c::Flag) -> TermKey {
         unsafe {
-            c::TERMKEY_CHECK_VERSION();
+            c::CHECK_VERSION();
             let tk = c::termkey_new(fd, std::mem::transmute(flags));
             if tk as usize == 0 {
                 panic!()
@@ -19,9 +19,9 @@ impl TermKey {
             TermKey { tk: tk }
         }
     }
-    pub fn new_abstract(term: &str, flags: c::X_TermKey_Flag) -> TermKey {
+    pub fn new_abstract(term: &str, flags: c::Flag) -> TermKey {
         unsafe {
-            c::TERMKEY_CHECK_VERSION();
+            c::CHECK_VERSION();
             ::std::ffi::CString::new(term.as_bytes())
                 .map(|c_buffer| {
                     let tk = c::termkey_new_abstract(c_buffer.as_ptr(), std::mem::transmute(flags));
@@ -68,10 +68,10 @@ impl TermKey {
         unsafe { c::termkey_get_fd(self.tk) as isize }
     }
 
-    pub fn get_flags(&mut self) -> c::X_TermKey_Flag {
+    pub fn get_flags(&mut self) -> c::Flag {
         unsafe { std::mem::transmute(c::termkey_get_flags(self.tk)) }
     }
-    pub fn set_flags(&mut self, newflags: c::X_TermKey_Flag) {
+    pub fn set_flags(&mut self, newflags: c::Flag) {
         unsafe { c::termkey_set_flags(self.tk, std::mem::transmute(newflags)) }
     }
 
@@ -82,10 +82,10 @@ impl TermKey {
         unsafe { c::termkey_set_waittime(self.tk, msec as c::c_int) }
     }
 
-    pub fn get_canonflags(&mut self) -> c::X_TermKey_Canon {
+    pub fn get_canonflags(&mut self) -> c::Canon {
         unsafe { std::mem::transmute(c::termkey_get_canonflags(self.tk)) }
     }
-    pub fn set_canonflags(&mut self, cflags: c::X_TermKey_Canon) {
+    pub fn set_canonflags(&mut self, cflags: c::Canon) {
         unsafe { c::termkey_set_canonflags(self.tk, std::mem::transmute(cflags)) }
     }
 
@@ -128,66 +128,66 @@ impl Utf8Char {
     }
 }
 
-// called TermKeyKey in C
+// called Key in C
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
-pub enum TermKeyEvent {
-    UnknownCsiEvent,
+pub enum Event {
+    UnknownCsi,
 
-    UnicodeEvent {
+    Unicode {
         codepoint: char,
-        mods: c::X_TermKey_KeyMod,
+        mods: c::KeyMod,
         utf8: Utf8Char,
     },
-    FunctionEvent {
+    Function {
         num: isize,
-        mods: c::X_TermKey_KeyMod,
+        mods: c::KeyMod,
     },
-    KeySymEvent {
-        sym: c::TermKeySym,
-        mods: c::X_TermKey_KeyMod,
+    KeySym {
+        sym: c::Sym,
+        mods: c::KeyMod,
     },
-    MouseEvent {
-        ev: c::TermKeyMouseEvent,
-        mods: c::X_TermKey_KeyMod,
+    Mouse {
+        ev: c::MouseEvent,
+        mods: c::KeyMod,
         button: isize,
         line: isize,
         col: isize,
     },
-    PositionEvent {
+    Position {
         line: isize,
         col: isize,
     },
-    ModeReportEvent {
+    ModeReport {
         initial: isize,
         mode: isize,
         value: isize,
     },
 }
 
-impl TermKeyEvent {
-    pub fn from_c(tk: *mut c::TermKey, key: c::TermKeyKey) -> TermKeyEvent {
+impl Event {
+    pub fn from_c(tk: *mut c::TermKey, key: c::Key) -> Event {
         match key.type_ {
-            c::TermKeyType::TERMKEY_TYPE_UNICODE => unsafe {
-                TermKeyEvent::UnicodeEvent {
+            c::Type::UNICODE => unsafe {
+                Event::Unicode {
                     mods: std::mem::transmute(key.modifiers),
                     codepoint: std::char::from_u32(key.codepoint() as u32).unwrap(),
                     utf8: Utf8Char { bytes: key.utf8 },
                 }
             },
-            c::TermKeyType::TERMKEY_TYPE_FUNCTION => unsafe {
-                TermKeyEvent::FunctionEvent {
+            c::Type::FUNCTION => unsafe {
+                Event::Function {
                     mods: std::mem::transmute(key.modifiers),
                     num: key.num() as isize,
                 }
             },
-            c::TermKeyType::TERMKEY_TYPE_KEYSYM => unsafe {
-                TermKeyEvent::KeySymEvent {
+            c::Type::KEYSYM => unsafe {
+                Event::KeySym {
                     mods: std::mem::transmute(key.modifiers),
                     sym: key.sym(),
                 }
             },
-            c::TermKeyType::TERMKEY_TYPE_MOUSE => {
-                let mut ev: c::TermKeyMouseEvent = c::TermKeyMouseEvent::TERMKEY_MOUSE_UNKNOWN;
+            c::Type::MOUSE => {
+                let mut ev: c::MouseEvent = c::MouseEvent::UNKNOWN;
                 let mut button: c::c_int = 0;
                 let mut line: c::c_int = 0;
                 let mut col: c::c_int = 0;
@@ -199,11 +199,11 @@ impl TermKeyEvent {
                         &mut button,
                         &mut line,
                         &mut col,
-                    ) != c::TermKeyResult::TERMKEY_RES_KEY
+                    ) != c::Result::KEY
                     {
                         panic!()
                     }
-                    TermKeyEvent::MouseEvent {
+                    Event::Mouse {
                         mods: std::mem::transmute(key.modifiers),
                         ev: ev,
                         button: button as isize,
@@ -212,22 +212,22 @@ impl TermKeyEvent {
                     }
                 }
             }
-            c::TermKeyType::TERMKEY_TYPE_POSITION => {
+            c::Type::POSITION => {
                 let mut line: c::c_int = 0;
                 let mut col: c::c_int = 0;
                 unsafe {
                     if c::termkey_interpret_position(tk, &key, &mut line, &mut col)
-                        != c::TermKeyResult::TERMKEY_RES_KEY
+                        != c::Result::KEY
                     {
                         panic!()
                     }
-                    TermKeyEvent::PositionEvent {
+                    Event::Position {
                         line: line as isize,
                         col: col as isize,
                     }
                 }
             }
-            c::TermKeyType::TERMKEY_TYPE_MODEREPORT => {
+            c::Type::MODEREPORT => {
                 let mut initial: c::c_int = 0;
                 let mut mode: c::c_int = 0;
                 let mut value: c::c_int = 0;
@@ -238,43 +238,43 @@ impl TermKeyEvent {
                         &mut initial,
                         &mut mode,
                         &mut value,
-                    ) != c::TermKeyResult::TERMKEY_RES_KEY
+                    ) != c::Result::KEY
                     {
                         panic!()
                     }
-                    TermKeyEvent::ModeReportEvent {
+                    Event::ModeReport {
                         initial: initial as isize,
                         mode: mode as isize,
                         value: value as isize,
                     }
                 }
             }
-            c::TermKeyType::TERMKEY_TYPE_UNKNOWN_CSI => {
+            c::Type::UNKNOWN_CSI => {
                 // termkey 0.17 hard-codes size as 16. Oops!
                 // once termkey is fixed we should change this to a loop
 
                 // Removed, I have decided not to expose this API
-                TermKeyEvent::UnknownCsiEvent
+                Event::UnknownCsi
             }
         }
     }
 }
 
-pub enum TermKeyResult {
+pub enum Result {
     None_,
-    Key(TermKeyEvent),
+    Key(Event),
     Eof,
     Again,
     Error { err: ::std::io::Error },
 }
-impl TermKeyResult {
-    pub fn from_c(tk: *mut c::TermKey, key: c::TermKeyKey, res: c::TermKeyResult) -> TermKeyResult {
+impl Result {
+    pub fn from_c(tk: *mut c::TermKey, key: c::Key, res: c::Result) -> Result {
         match res {
-            c::TermKeyResult::TERMKEY_RES_NONE => TermKeyResult::None_,
-            c::TermKeyResult::TERMKEY_RES_KEY => TermKeyResult::Key(TermKeyEvent::from_c(tk, key)),
-            c::TermKeyResult::TERMKEY_RES_EOF => TermKeyResult::Eof,
-            c::TermKeyResult::TERMKEY_RES_AGAIN => TermKeyResult::Again,
-            c::TermKeyResult::TERMKEY_RES_ERROR => TermKeyResult::Error {
+            c::Result::NONE => Result::None_,
+            c::Result::KEY => Result::Key(Event::from_c(tk, key)),
+            c::Result::EOF => Result::Eof,
+            c::Result::AGAIN => Result::Again,
+            c::Result::ERROR => Result::Error {
                 err: ::std::io::Error::last_os_error(),
             },
         }
@@ -282,25 +282,25 @@ impl TermKeyResult {
 }
 
 impl TermKey {
-    pub fn getkey(&mut self) -> TermKeyResult {
-        let mut key: c::TermKeyKey = std::default::Default::default();
+    pub fn getkey(&mut self) -> Result {
+        let mut key: c::Key = std::default::Default::default();
         let res = unsafe { c::termkey_getkey(self.tk, &mut key) };
-        TermKeyResult::from_c(self.tk, key, res)
+        Result::from_c(self.tk, key, res)
     }
-    pub fn getkey_force(&mut self) -> TermKeyResult {
-        let mut key: c::TermKeyKey = std::default::Default::default();
+    pub fn getkey_force(&mut self) -> Result {
+        let mut key: c::Key = std::default::Default::default();
         let res = unsafe { c::termkey_getkey_force(self.tk, &mut key) };
-        TermKeyResult::from_c(self.tk, key, res)
+        Result::from_c(self.tk, key, res)
     }
-    pub fn waitkey(&mut self) -> TermKeyResult {
-        let mut key: c::TermKeyKey = std::default::Default::default();
+    pub fn waitkey(&mut self) -> Result {
+        let mut key: c::Key = std::default::Default::default();
         let res = unsafe { c::termkey_waitkey(self.tk, &mut key) };
-        TermKeyResult::from_c(self.tk, key, res)
+        Result::from_c(self.tk, key, res)
     }
     // will never return Key
-    pub fn advisereadable(&mut self) -> TermKeyResult {
+    pub fn advisereadable(&mut self) -> Result {
         let res = unsafe { c::termkey_advisereadable(self.tk) };
-        TermKeyResult::from_c(self.tk, std::default::Default::default(), res)
+        Result::from_c(self.tk, std::default::Default::default(), res)
     }
     pub fn push_bytes(&mut self, bytes: &[u8]) -> usize {
         unsafe {
@@ -316,9 +316,9 @@ impl TermKey {
 impl TermKey {
     // Unsupported because it requires static strings (C literals)
     // Also would require rethinking the enum nature.
-    // pub fn register_keyname(&mut self, sym: c::TermKeySym, name: &str) -> c::TermKeySym { }
+    // pub fn register_keyname(&mut self, sym: c::Sym, name: &str) -> c::Sym { }
 
-    //pub fn get_keyname(&mut self, sym: c::TermKeySym) -> &'static str
+    //pub fn get_keyname(&mut self, sym: c::Sym) -> &'static str
     //{
     //unsafe
     //{
@@ -326,7 +326,7 @@ impl TermKey {
     //}
     //}
 
-    pub fn lookup_keyname<'a>(&mut self, s: &'a str, sym: &mut c::TermKeySym) -> Option<&'a str> {
+    pub fn lookup_keyname<'a>(&mut self, s: &'a str, sym: &mut c::Sym) -> Option<&'a str> {
         unsafe {
             ::std::ffi::CString::new(s.as_bytes())
                 .ok()
@@ -345,7 +345,7 @@ impl TermKey {
         }
     }
 
-    pub fn keyname2sym(&mut self, keyname: &str) -> c::TermKeySym {
+    pub fn keyname2sym(&mut self, keyname: &str) -> c::Sym {
         unsafe {
             ::std::ffi::CString::new(keyname.as_bytes())
                 .map(|name| c::termkey_keyname2sym(self.tk, name.as_ptr()))
@@ -355,42 +355,38 @@ impl TermKey {
 }
 
 impl TermKey {
-    pub fn strfkey(&mut self, key: TermKeyEvent, format: c::TermKeyFormat) -> String {
+    pub fn strfkey(&mut self, key: Event, format: c::Format) -> String {
         let mut buf: [c::c_char; 52] = [0; 52];
         let mut key_ = match key {
-            TermKeyEvent::UnicodeEvent {
+            Event::Unicode {
                 mods,
                 codepoint,
                 utf8,
-            } => c::TermKeyKey::from_codepoint(mods, codepoint, utf8.bytes),
-            TermKeyEvent::FunctionEvent { mods, num } => c::TermKeyKey::from_num(mods, num),
-            TermKeyEvent::KeySymEvent { mods, sym } => c::TermKeyKey::from_sym(mods, sym),
-            TermKeyEvent::MouseEvent {
+            } => c::Key::from_codepoint(mods, codepoint, utf8.bytes),
+            Event::Function { mods, num } => c::Key::from_num(mods, num),
+            Event::KeySym { mods, sym } => c::Key::from_sym(mods, sym),
+            Event::Mouse {
                 ev,
                 mods,
                 button,
                 line,
                 col,
-            } => c::TermKeyKey::from_mouse(
+            } => c::Key::from_mouse(
                 mods,
                 ev,
                 button as c::c_int,
                 line as c::c_int,
                 col as c::c_int,
             ),
-            TermKeyEvent::PositionEvent { line, col } => {
-                c::TermKeyKey::from_position(line as c::c_int, col as c::c_int)
+            Event::Position { line, col } => {
+                c::Key::from_position(line as c::c_int, col as c::c_int)
             }
-            TermKeyEvent::ModeReportEvent {
+            Event::ModeReport {
                 initial,
                 mode,
                 value,
-            } => c::TermKeyKey::from_mode_report(
-                initial as c::c_int,
-                mode as c::c_int,
-                value as c::c_int,
-            ),
-            TermKeyEvent::UnknownCsiEvent => {
+            } => c::Key::from_mode_report(initial as c::c_int, mode as c::c_int, value as c::c_int),
+            Event::UnknownCsi => {
                 // TODO implement
                 return "unknown csi (stringification not implemented)".to_string();
             }
@@ -402,21 +398,17 @@ impl TermKey {
         }
     }
 
-    pub fn strpkey<'a>(
-        &mut self,
-        s: &'a str,
-        format: c::TermKeyFormat,
-    ) -> Option<(TermKeyEvent, &'a str)> {
+    pub fn strpkey<'a>(&mut self, s: &'a str, format: c::Format) -> Option<(Event, &'a str)> {
         unsafe {
             ::std::ffi::CString::new(s.as_bytes())
                 .ok()
                 .and_then(|cbuf| {
-                    let mut ckey: c::TermKeyKey = std::default::Default::default();
+                    let mut ckey: c::Key = std::default::Default::default();
                     let rbuf = c::termkey_strpkey(self.tk, cbuf.as_ptr(), &mut ckey, format);
                     let ci = cbuf.as_ptr() as usize;
                     let ri = rbuf as usize;
                     if ri != 0 {
-                        let key = TermKeyEvent::from_c(self.tk, ckey);
+                        let key = Event::from_c(self.tk, ckey);
                         let off = ri - ci;
                         let sbytelen = s.as_bytes().len();
                         Some((key, s.slice_unchecked(off, sbytelen)))

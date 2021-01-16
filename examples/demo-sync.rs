@@ -3,17 +3,13 @@ extern crate termkey;
 fn main() {
     let mouse = 0; // TODO parse arg -m, default 1000
     let mouse_proto = 0; // TODO parse arg -p (no default)
-    let format = termkey::c::TermKeyFormat::TERMKEY_FORMAT_VIM;
+    let format = termkey::c::Format::VIM;
 
-    let mut tk = termkey::TermKey::new(
-        0,
-        termkey::c::X_TermKey_Flag::TERMKEY_FLAG_SPACESYMBOL
-            | termkey::c::X_TermKey_Flag::TERMKEY_FLAG_CTRLC,
-    );
-    if !(tk.get_flags() & termkey::c::X_TermKey_Flag::TERMKEY_FLAG_UTF8).is_empty() {
+    let mut tk = termkey::TermKey::new(0, termkey::c::Flag::SPACESYMBOL | termkey::c::Flag::CTRLC);
+    if !(tk.get_flags() & termkey::c::Flag::UTF8).is_empty() {
         println!("Termkey in UTF-8 mode")
     }
-    if !(tk.get_flags() & termkey::c::X_TermKey_Flag::TERMKEY_FLAG_RAW).is_empty() {
+    if !(tk.get_flags() & termkey::c::Flag::RAW).is_empty() {
         println!("Termkey in RAW mode")
     }
     if mouse != 0 {
@@ -24,13 +20,13 @@ fn main() {
     }
     loop {
         match tk.waitkey() {
-            termkey::TermKeyResult::Eof => break,
-            termkey::TermKeyResult::Key(key) => {
+            termkey::Result::Eof => break,
+            termkey::Result::Key(key) => {
                 let s = tk.strfkey(key, format);
                 println!("Key {}", s);
 
                 match key {
-                    termkey::TermKeyEvent::MouseEvent {
+                    termkey::Event::Mouse {
                         mods: _,
                         ev: _,
                         button: _,
@@ -42,10 +38,10 @@ fn main() {
                             line, col
                         )
                     }
-                    termkey::TermKeyEvent::PositionEvent { line, col } => {
+                    termkey::Event::Position { line, col } => {
                         println!("Cursor position report at line={}, col={}\n", line, col)
                     }
-                    termkey::TermKeyEvent::ModeReportEvent {
+                    termkey::Event::ModeReport {
                         initial,
                         mode,
                         value,
@@ -53,18 +49,18 @@ fn main() {
                         let initial_str = if initial != 0 { "DEC" } else { "ANSI" };
                         println!("Mode report {} mode {} = {}\n", initial_str, mode, value)
                     }
-                    termkey::TermKeyEvent::UnknownCsiEvent => {
+                    termkey::Event::UnknownCsi => {
                         println!("Unrecognised CSI (printing unimplemented, sorry)\n")
                     }
                     _ => {}
                 }
                 match key {
-                    termkey::TermKeyEvent::UnicodeEvent {
+                    termkey::Event::Unicode {
                         mods,
                         codepoint,
                         utf8: _,
                     } => {
-                        if !(mods & termkey::c::X_TermKey_KeyMod::TERMKEY_KEYMOD_CTRL).is_empty()
+                        if !(mods & termkey::c::KeyMod::CTRL).is_empty()
                             && (codepoint == 'C' || codepoint == 'c')
                         {
                             break;
@@ -77,7 +73,7 @@ fn main() {
                     _ => {}
                 }
             }
-            termkey::TermKeyResult::Error { err: _ } => {
+            termkey::Result::Error { err: _ } => {
                 println!("Error of some sort")
             }
             _ => {
