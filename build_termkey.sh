@@ -1,6 +1,6 @@
 #!/bin/bash
 
-repository="git://github.com/mathall/libtermkey.git"
+repository="https://github.com/mathall/libtermkey.git"
 git_ref="${1-master}"
 work_dir="termkey-c/$git_ref"
 
